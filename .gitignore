@@ -73,3 +73,7 @@ config/secrets/
 .augment-context-state.json
 *.out
 *.err
+
+# Local one-off scripts (do not ship)
+server/reset_admin_password.py
+server/test_password.py
