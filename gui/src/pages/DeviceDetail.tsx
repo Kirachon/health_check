@@ -62,7 +62,11 @@ const storageLabelFromSuffix = (suffix: string) => {
     return trimmed;
 };
 
-const getStorageIndicator = (d: StorageRow) => {
+const getStorageIndicator = (d: StorageRow, deviceStatus: string) => {
+    const normalizedStatus = (deviceStatus || '').toLowerCase();
+    const isDeviceOffline = normalizedStatus === 'offline';
+    const isDeviceOnline = normalizedStatus === 'online';
+
     const hasCapacity = d.percent != null || d.totalGb != null || d.usedGb != null || d.freeGb != null;
     const hasIo =
         d.readMb != null ||
@@ -71,9 +75,14 @@ const getStorageIndicator = (d: StorageRow) => {
         d.readTimeMs != null ||
         d.writeTimeMs != null;
 
-    if (hasCapacity) return { color: '#10b981', label: 'Reporting (volume)' }; // green
-    if (hasIo) return { color: '#f59e0b', label: 'Reporting (disk I/O only)' }; // amber
-    return { color: '#ef4444', label: 'No data' }; // red
+    // If the device itself is offline, any per-drive indicator is stale.
+    if (isDeviceOffline) return { color: '#ef4444', label: 'Offline (device not reporting)' }; // red
+    if (!isDeviceOnline) return { color: '#94a3b8', label: `Unknown device status: ${deviceStatus || '—'}` }; // slate
+
+    // Per-drive reporting states while the device is online.
+    if (hasCapacity) return { color: '#10b981', label: 'Online (volume size/free/used)' }; // green
+    if (hasIo) return { color: '#f59e0b', label: 'Online (disk activity only; common for physical disks)' }; // amber
+    return { color: '#94a3b8', label: 'Unknown (no metrics for this drive yet)' }; // slate
 };
 
 const formatLastSeen = (lastSeen: string | null) => {
@@ -292,10 +301,36 @@ const DeviceDetail: React.FC = () => {
                     <h3>Storage</h3>
                     {storage.length > 0 ? (
                         <div className="device-info-panel">
+                            <div className="info-item" style={{ gap: 8 }}>
+                                <span className="info-label">Storage uptime:</span>
+                                <span>{uptimeSeconds == null ? '—' : formatDuration(uptimeSeconds)}</span>
+                            </div>
+                            <div className="info-item" style={{ gap: 12, flexWrap: 'wrap' }}>
+                                {[
+                                    { color: '#10b981', label: 'Online (volume)' },
+                                    { color: '#f59e0b', label: 'Online (activity only)' },
+                                    { color: '#94a3b8', label: 'Unknown' },
+                                    { color: '#ef4444', label: 'Offline (device)' },
+                                ].map((item) => (
+                                    <span key={item.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                        <span
+                                            aria-hidden="true"
+                                            style={{
+                                                display: 'inline-block',
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: 9999,
+                                                backgroundColor: item.color,
+                                            }}
+                                        />
+                                        <span style={{ fontSize: '0.9em', opacity: 0.9 }}>{item.label}</span>
+                                    </span>
+                                ))}
+                            </div>
                             {storage.map((d) => (
                                 <div key={d.id} className="info-item">
                                     {(() => {
-                                        const indicator = getStorageIndicator(d);
+                                        const indicator = getStorageIndicator(d, device.status);
                                         return (
                                             <span
                                                 title={indicator.label}
