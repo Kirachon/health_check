@@ -9,10 +9,10 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     
     # Database
-    DATABASE_URL: str = "postgresql://monitor_user:monitor_pass@localhost:5432/health_monitor"
+    DATABASE_URL: str = "postgresql://monitor_user:monitor_pass@localhost:5433/health_monitor"
     
     # VictoriaMetrics
-    VICTORIA_METRICS_URL: str = "http://localhost:8428"
+    VICTORIA_METRICS_URL: str = "http://localhost:9090"
     
     # JWT
     SECRET_KEY: str = "your-secret-key-change-in-production-minimum-32-characters"

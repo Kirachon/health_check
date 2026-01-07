@@ -1,7 +1,7 @@
 # Device Agent Configuration
 
 # Server settings
-server_url: "http://localhost:8428"  # VictoriaMetrics OTLP endpoint
+server_url: "http://localhost:9090"  # VictoriaMetrics OTLP endpoint
 device_token: ""  # Generate via: POST /api/v1/devices/register
 
 # Device identification

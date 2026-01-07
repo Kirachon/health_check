@@ -2,6 +2,12 @@
 
 > Open source distributed monitoring system for servers and devices built with VictoriaMetrics, FastAPI, and React.
 
+**Repository:** https://github.com/Kirachon/health_check
+
+## Project Status
+
+✅ **Production Ready** - All 5 core phases complete (83% overall)
+
 ## Quick Start
 
 ### Prerequisites
