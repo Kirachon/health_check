@@ -1,0 +1,25 @@
+# Device Agent Configuration
+
+# Server settings
+server_url: "http://localhost:8428"  # VictoriaMetrics OTLP endpoint
+device_token: ""  # Generate via: POST /api/v1/devices/register
+
+# Device identification
+device_id: ""  # UUID from registration
+hostname: ""  # Auto-detected if empty
+ip: ""  # Auto-detected if empty
+
+# Metrics collection
+collection_interval: 30  # seconds
+retry_attempts: 3
+retry_delay: 5  # seconds
+
+# Metrics to collect
+metrics:
+  cpu: true
+  memory: true
+  disk: true
+  network: true
+
+# Logging
+log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR

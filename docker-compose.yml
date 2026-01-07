@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Time-Series Database
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: health_monitor_vm
+    ports:
+      - "8428:8428"
+    volumes:
+      - victoriametrics-data:/victoria-metrics-data
+    command:
+      - "--storageDataPath=/victoria-metrics-data"
+      - "--httpListenAddr=:8428"
+      - "--retentionPeriod=12" # 12 months retention
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: health_monitor_db
+    environment:
+      POSTGRES_DB: health_monitor
+      POSTGRES_USER: monitor_user
+      POSTGRES_PASSWORD: monitor_pass # Change in production
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - monitoring
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U monitor_user -d health_monitor" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Grafana for Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: health_monitor_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin # Change in production
+      GF_INSTALL_PLUGINS: ""
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    restart: unless-stopped
+    networks:
+      - monitoring
+    depends_on:
+      - victoriametrics
+
+  # Alertmanager for Alert Routing
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: health_monitor_alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager-data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    restart: unless-stopped
+    networks:
+      - monitoring
+  # FastAPI Server (will be added in Phase 2)
+  # server:
+  #   build: ./server
+  #   container_name: health_monitor_server
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     DATABASE_URL: postgresql://monitor_user:monitor_pass@postgres:5432/health_monitor
+  #     VICTORIA_METRICS_URL: http://victoriametrics:8428
+  #   depends_on:
+  #     - postgres
+  #     - victoriametrics
+  #   networks:
+  #     - monitoring
+
+volumes:
+  victoriametrics-data:
+  postgres-data:
+  grafana-data:
+  alertmanager-data:
+
+
+networks:
+  monitoring:
+    driver: bridge

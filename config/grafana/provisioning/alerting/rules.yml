@@ -1,0 +1,225 @@
+apiVersion: 1
+
+groups:
+  - name: device_health_alerts
+    interval: 1m
+    rules:
+      # Critical: CPU usage over 90% for 5 minutes
+      - uid: cpu_critical
+        title: Critical CPU Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: cpu_percent
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  type: query
+              refId: B
+              type: classic_conditions
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: B
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'CPU usage is {{ $value }}% on device {{ $labels.host_name }}'
+          summary: 'Critical CPU usage detected'
+        labels:
+          severity: critical
+
+      # Warning: CPU usage over 80% for 5 minutes
+      - uid: cpu_warning
+        title: High CPU Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: cpu_percent
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 80
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  type: query
+              refId: B
+              type: classic_conditions
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: B
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'CPU usage is {{ $value }}% on device {{ $labels.host_name }}'
+          summary: 'High CPU usage detected'
+        labels:
+          severity: warning
+
+      # Critical: Memory usage over 85% for 5 minutes
+      - uid: memory_critical
+        title: Critical Memory Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: memory_percent
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 85
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  type: query
+              refId: B
+              type: classic_conditions
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: B
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        annotations:
+          description: 'Memory usage is {{ $value }}% on device {{ $labels.host_name }}'
+          summary: 'Critical memory usage detected'
+        labels:
+          severity: critical
+
+      # Critical: Disk usage over 90%
+      - uid: disk_critical
+        title: Critical Disk Usage
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 600
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: 'disk_percent_C_'
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 90
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  type: query
+              refId: B
+              type: classic_conditions
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: B
+              refId: C
+              type: threshold
+        noDataState: NoData
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: 'Disk usage is {{ $value }}% on device {{ $labels.host_name }}'
+          summary: 'Critical disk space - action required'
+        labels:
+          severity: critical
+
+      # Warning: Device offline for more than 2 minutes
+      - uid: device_offline
+        title: Device Offline
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: victoriametrics
+            model:
+              expr: 'absent(cpu_percent)'
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  type: query
+              refId: B
+              type: classic_conditions
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: B
+              refId: C
+              type: threshold
+        noDataState: Alerting
+        execErrState: Error
+        for: 2m
+        annotations:
+          description: 'Device {{ $labels.host_name }} has not sent metrics for over 2 minutes'
+          summary: 'Device appears to be offline'
+        labels:
+          severity: warning
