@@ -29,16 +29,16 @@ docker-compose logs -f
 ```
 
 **Services:**
-- VictoriaMetrics: http://localhost:8428
-- Grafana: http://localhost:3000 (admin/admin)
-- Alertmanager: http://localhost:9093
-- PostgreSQL: localhost:5432
+- VictoriaMetrics: http://localhost:9090
+- Grafana: http://localhost:3001 (admin/admin)
+- Alertmanager: http://localhost:9094
+- PostgreSQL: localhost:5433
 
 ### 2. Verify Setup
 
 ```bash
 # Check VictoriaMetrics health
-curl http://localhost:8428/health
+curl http://localhost:9090/health
 
 # Check PostgreSQL connection
 docker exec health_monitor_db psql -U monitor_user -d health_monitor -c "SELECT version();"
@@ -75,24 +75,6 @@ health_check/
 | API Server | FastAPI | 0.109+ |
 | Database | PostgreSQL | 15 |
 | Visualization | Grafana | Latest |
-| Alerting | Alertmanager | Latest |
-| Frontend | React + Vite | 18 |
-| Agent | Python + psutil | 3.11+ |
-
-## Development Phases
-
-- [x] Phase 1: Infrastructure Setup
-- [ ] Phase 2: Central Server (FastAPI)
-- [ ] Phase 3: Device Agent
-- [ ] Phase 4: Admin GUI
-- [ ] Phase 5: Alerting & Notifications
-- [ ] Phase 6: Deployment & Packaging
-
-## Testing
-
-```bash
-# Backend tests (Phase 2+)
-cd server && pytest tests/ -v
 
 # Frontend tests (Phase 4+)
 cd gui && npm test

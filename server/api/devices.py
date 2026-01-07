@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from typing import List, Optional
 import secrets
@@ -9,6 +9,7 @@ import secrets
 from db.models import get_db, Device, User
 from api.auth import get_current_user
 from services.auth_service import get_password_hash
+from config import settings
 
 
 router = APIRouter(prefix="/devices", tags=["Devices"])
@@ -42,6 +43,44 @@ class DeviceResponse(BaseModel):
 class DeviceListResponse(BaseModel):
     devices: List[DeviceResponse]
     total: int
+
+
+def _as_utc_aware(dt: datetime) -> datetime:
+    """
+    Normalize a datetime to UTC *aware* so arithmetic never mixes naive/aware.
+
+    - If the DB returns naive datetimes (common with SQLite), treat them as UTC.
+    - If the DB returns aware datetimes (common with Postgres), convert to UTC.
+    """
+
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def compute_device_status(last_seen: Optional[datetime]) -> str:
+    if not isinstance(last_seen, datetime):
+        return "offline"
+
+    threshold = timedelta(seconds=settings.DEVICE_OFFLINE_THRESHOLD_SECONDS)
+    now_utc = datetime.now(timezone.utc)
+    last_seen_utc = _as_utc_aware(last_seen)
+
+    return "online" if (now_utc - last_seen_utc) <= threshold else "offline"
+
+
+def to_device_response(device: Device) -> DeviceResponse:
+    data = DeviceResponse.model_validate(device)
+    # Override status based on heartbeat recency
+    return DeviceResponse(
+        id=data.id,
+        hostname=data.hostname,
+        ip=data.ip,
+        os=data.os,
+        status=compute_device_status(data.last_seen),
+        last_seen=data.last_seen,
+        created_at=data.created_at,
+    )
 
 
 # Endpoints
@@ -80,12 +119,22 @@ def list_devices(
     query = db.query(Device)
     
     if status:
-        query = query.filter(Device.status == status)
+        # Derive status from last_seen rather than trusting stored status.
+        # Use a naive cutoff for SQL comparisons; many DB drivers (notably SQLite)
+        # do not like binding timezone-aware datetimes even if the model column
+        # is declared with timezone=True.
+        cutoff = datetime.utcnow() - timedelta(seconds=settings.DEVICE_OFFLINE_THRESHOLD_SECONDS)
+        if status == "online":
+            query = query.filter(Device.last_seen.is_not(None), Device.last_seen >= cutoff)
+        elif status == "offline":
+            query = query.filter((Device.last_seen.is_(None)) | (Device.last_seen < cutoff))
+        else:
+            query = query.filter(Device.status == status)
     
     total = query.count()
     devices = query.offset(skip).limit(limit).all()
-    
-    return DeviceListResponse(devices=devices, total=total)
+
+    return DeviceListResponse(devices=[to_device_response(d) for d in devices], total=total)
 
 
 @router.get("/{device_id}", response_model=DeviceResponse)
@@ -100,7 +149,7 @@ def get_device(
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
     
-    return device
+    return to_device_response(device)
 
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)

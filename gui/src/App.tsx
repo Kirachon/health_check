@@ -1,20 +1,43 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
+import { useAuth } from './context/auth';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import DeviceDetail from './pages/DeviceDetail';
+import MainLayout from './components/MainLayout';
 import './App.css';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <div className="loading-screen">Loading...</div>;
+    return (
+      <div className="loading-screen" style={{
+        height: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg-deep)',
+        color: 'var(--text-main)'
+      }}>
+        Loading...
+      </div>
+    );
   }
 
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  return <MainLayout>{children}</MainLayout>;
 };
+
+import Alerts from './pages/Alerts';
+import Maps from './pages/Maps';
+import Discovery from './pages/Discovery';
+import SystemInfo from './pages/SystemInfo';
+import Configuration from './pages/Configuration';
 
 function App() {
   return (
@@ -30,6 +53,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/devices" element={<Navigate to="/dashboard" />} />
           <Route
             path="/devices/:deviceId"
             element={
@@ -38,6 +62,11 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
+          <Route path="/map" element={<ProtectedRoute><Maps /></ProtectedRoute>} />
+          <Route path="/discovery" element={<ProtectedRoute><Discovery /></ProtectedRoute>} />
+          <Route path="/system" element={<ProtectedRoute><SystemInfo /></ProtectedRoute>} />
+          <Route path="/config" element={<ProtectedRoute><Configuration /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </BrowserRouter>
@@ -46,3 +75,5 @@ function App() {
 }
 
 export default App;
+
+

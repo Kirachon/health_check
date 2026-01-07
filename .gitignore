@@ -67,3 +67,9 @@ Thumbs.db
 *.pem
 *.crt
 config/secrets/
+
+# Local tooling artifacts
+.context-engine/
+.augment-context-state.json
+*.out
+*.err

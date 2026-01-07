@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine, Column, String, Boolean, DateTime, DECIMAL, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy.types import TypeDecorator, CHAR
 from datetime import datetime
 import uuid
 
@@ -13,11 +14,41 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+
+    Uses PostgreSQL's UUID type, otherwise stores UUIDs as 36-char strings.
+    """
+
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, uuid.UUID):
+            return str(value) if dialect.name != "postgresql" else value
+        parsed = uuid.UUID(str(value))
+        return str(parsed) if dialect.name != "postgresql" else parsed
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(str(value))
+
+
 # Database models
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     username = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(50), nullable=False, default="admin")
@@ -28,7 +59,7 @@ class User(Base):
 class Device(Base):
     __tablename__ = "devices"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
     hostname = Column(String(255), nullable=False)
     ip = Column(String(45), nullable=False)
     os = Column(String(255))
@@ -42,8 +73,8 @@ class Device(Base):
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), nullable=False)
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), nullable=False)
     token_hash = Column(String(255), unique=True, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
@@ -53,8 +84,8 @@ class RefreshToken(Base):
 class Alert(Base):
     __tablename__ = "alerts"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    device_id = Column(UUID(as_uuid=True))
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    device_id = Column(GUID())
     metric = Column(String(100), nullable=False)
     value = Column(DECIMAL(10, 2))
     threshold = Column(DECIMAL(10, 2))
@@ -62,7 +93,7 @@ class Alert(Base):
     message = Column(String)
     acknowledged = Column(Boolean, default=False)
     acknowledged_at = Column(DateTime(timezone=True))
-    acknowledged_by = Column(UUID(as_uuid=True))
+    acknowledged_by = Column(GUID())
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
 

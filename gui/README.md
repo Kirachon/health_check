@@ -15,7 +15,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The GUI will be available at http://localhost:5173
+The GUI will be available at http://localhost:5173 (or http://localhost:5174 if you run Vite with `--port 5174`).
 
 ## Features
 
@@ -48,8 +48,8 @@ The GUI will be available at http://localhost:5173
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `VITE_API_URL` | FastAPI backend URL | `http://localhost:8000/api/v1` |
-| `VITE_VM_URL` | VictoriaMetrics URL | `http://localhost:8428` |
+| `VITE_API_URL` | FastAPI backend URL | `http://localhost:8001/api/v1` |
+| `VITE_VM_URL` | VictoriaMetrics URL | `http://localhost:9090` |
 
 ## Tech Stack
 

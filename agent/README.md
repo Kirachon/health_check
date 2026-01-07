@@ -25,7 +25,8 @@ pip install -r requirements.txt
 Edit `config.yaml`:
 
 ```yaml
-server_url: "http://your-server:8428"
+server_url: "http://your-vm:9090"
+api_url: "http://your-api:8001"
 collection_interval: 30
 ```
 
@@ -59,7 +60,8 @@ python main.py start
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `server_url` | VictoriaMetrics endpoint | `http://localhost:8428` |
+| `server_url` | VictoriaMetrics endpoint | `http://localhost:9090` |
+| `api_url` | FastAPI base URL | `http://localhost:8001` |
 | `collection_interval` | Seconds between collections | `30` |
 | `retry_attempts` | Max retry attempts | `3` |
 | `retry_delay` | Seconds between retries | `5` |
@@ -88,6 +90,14 @@ python main.py start
 - `network_bytes_recv` - Cumulative bytes received
 - `network_send_rate_mbps` - Current send rate
 - `network_recv_rate_mbps` - Current receive rate
+
+### Uptime / Storage
+- `system_uptime_seconds` - Seconds since last boot
+- `system_boot_time` - Boot time as Unix timestamp (seconds since epoch)
+- `disk_read_bytes_mb` / `disk_write_bytes_mb` - Total disk bytes read/written since boot (MB)
+- `disk_read_bytes_mb_{disk}` / `disk_write_bytes_mb_{disk}` - Per-disk bytes read/written since boot (MB)
+- `disk_read_time_ms` / `disk_write_time_ms` / `disk_busy_time_ms` - Cumulative disk I/O time since boot (if available)
+- `disk_read_time_ms_{disk}` / `disk_write_time_ms_{disk}` / `disk_busy_time_ms_{disk}` - Per-disk cumulative I/O time since boot (if available)
 
 ## Testing
 

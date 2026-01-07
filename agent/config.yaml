@@ -1,25 +1,24 @@
-# Device Agent Configuration
-
-# Server settings
-server_url: "http://localhost:9090"  # VictoriaMetrics OTLP endpoint
-device_token: ""  # Generate via: POST /api/v1/devices/register
-
-# Device identification
-device_id: ""  # UUID from registration
-hostname: ""  # Auto-detected if empty
-ip: ""  # Auto-detected if empty
-
-# Metrics collection
-collection_interval: 30  # seconds
-retry_attempts: 3
-retry_delay: 5  # seconds
-
-# Metrics to collect
+api_url: http://localhost:8001
+collection_interval: 30
+device_id: 0ebca04a-86f9-4619-a9bf-8bb39a76f9e0
+device_token: dev_PGxcpmygsD6gF3kgtUMxhYQasbSZXkhP7AB9pm177bc
+hostname: ''
+ip: ''
+log_level: INFO
 metrics:
   cpu: true
-  memory: true
   disk: true
+  memory: true
   network: true
+  uptime: true
+retry_attempts: 3
+retry_delay: 5
+server_url: http://localhost:9090
 
-# Logging
-log_level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+user_parameters:
+  - name: active_connections
+    command: 'netstat -an | find /c "ESTABLISHED"'
+    description: "Number of established network connections"
+  - name: process_count
+    command: 'tasklist | find /c /v ""'
+    description: "Total number of processes"

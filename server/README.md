@@ -22,12 +22,12 @@ cp .env.example .env
 python main.py
 ```
 
-Server will be available at http://localhost:8000
+Server will be available at http://localhost:8001 (or the value of `PORT` if set)
 
 ## API Documentation
 
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:8001/docs
+- ReDoc: http://localhost:8001/redoc
 
 ## Testing
 

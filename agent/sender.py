@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from opentelemetry import metrics
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
@@ -15,6 +15,14 @@ class MetricsSender:
         self.config = config
         self.device_info = device_info
         self.logger = logging.getLogger(__name__)
+
+        self._values: Dict[str, float] = {}
+        self._attributes = {
+            "device_id": self.config.get("device_id", "unknown"),
+            "host_name": self.device_info.get("hostname", "unknown"),
+            "host_ip": self.device_info.get("ip", "unknown"),
+            "os": self.device_info.get("os", "unknown"),
+        }
         
         # Configure OpenTelemetry
         self._setup_otel()
@@ -55,8 +63,15 @@ class MetricsSender:
     def _get_or_create_gauge(self, name: str, description: str = "") -> metrics.ObservableGauge:
         """Get or create a gauge for a metric"""
         if name not in self.gauges:
+            def callback(options, metric_name=name):
+                value = self._values.get(metric_name)
+                if value is None:
+                    return
+                yield metrics.Observation(value, attributes=self._attributes)
+
             self.gauges[name] = self.meter.create_observable_gauge(
                 name=name,
+                callbacks=[callback],
                 description=description,
                 unit=""
             )
@@ -65,22 +80,15 @@ class MetricsSender:
     def send_metrics(self, metrics_data: Dict[str, float]) -> bool:
         """Send metrics to VictoriaMetrics"""
         try:
-            # Create callbacks for each metric
             for metric_name, value in metrics_data.items():
-                # Create gauge and set value
-                gauge = self._get_or_create_gauge(
+                self._values[metric_name] = float(value)
+                self._get_or_create_gauge(
                     metric_name,
-                    description=f"Health monitor metric: {metric_name}"
+                    description=f"Health monitor metric: {metric_name}",
                 )
-                
-                # Set callback to return current value
-                def callback(options, name=metric_name, val=value):
-                    yield metrics.Observation(val)
-                
-                # Note: In production, we'd update a shared state instead
-                # This is a simplified implementation
             
-            self.logger.info(f"Sent {len(metrics_data)} metrics to {self.config['server_url']}")
+            # Actual OTLP export runs on the periodic reader interval.
+            self.logger.info(f"Updated {len(metrics_data)} metrics (next export scheduled)")
             return True
             
         except Exception as e:

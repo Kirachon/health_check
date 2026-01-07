@@ -2,8 +2,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db.models import Base, get_db
+from db.models import Base, get_db, User
 from main import app
+from services.auth_service import get_password_hash
 
 # Test database (SQLite in-memory)
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -27,6 +28,17 @@ app.dependency_overrides[get_db] = override_get_db
 def client():
     """Create test client with fresh database"""
     Base.metadata.create_all(bind=engine)
+
+    # Seed default admin user for auth tests
+    db = TestingSessionLocal()
+    try:
+        existing = db.query(User).filter(User.username == "admin").first()
+        if not existing:
+            db.add(User(username="admin", password_hash=get_password_hash("admin123"), role="admin"))
+            db.commit()
+    finally:
+        db.close()
+
     yield TestClient(app)
     Base.metadata.drop_all(bind=engine)
 

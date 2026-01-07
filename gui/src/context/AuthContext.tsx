@@ -1,27 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { apiClient } from '../api/client';
-
-interface AuthContextType {
-    isAuthenticated: boolean;
-    login: (username: string, password: string) => Promise<void>;
-    logout: () => Promise<void>;
-    loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from './auth';
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        // Check if user has valid token
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            setIsAuthenticated(true);
-        }
-        setLoading(false);
-    }, []);
+    const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('access_token')));
+    const [loading] = useState(false);
 
     const login = async (username: string, password: string) => {
         const data = await apiClient.login(username, password);
@@ -40,12 +23,4 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             {children}
         </AuthContext.Provider>
     );
-};
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
 };

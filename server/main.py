@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from db.models import Base, engine
 from api import auth, devices
+import os
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -40,4 +41,7 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    port = int(os.getenv("PORT", "8001"))
+    reload = os.getenv("UVICORN_RELOAD", "").strip().lower() in {"1", "true", "yes"}
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=reload)

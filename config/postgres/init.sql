@@ -1,6 +1,9 @@
 -- Health Monitoring System - Database Schema
 -- PostgreSQL Initialization Script
 
+-- Required for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Users table (Admin authentication)
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,7 +66,7 @@ CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 -- Create default admin user (password: 'admin123' - CHANGE IN PRODUCTION)
 -- Password hash generated with bcrypt rounds=12
 INSERT INTO users (username, password_hash, role) 
-VALUES ('admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5gyE.Jz9pqKJi', 'admin')
+VALUES ('admin', '$2b$12$ZCUsUsYgRkQdXqG5OH1QHOLPIqMvB.r6EobegNMnmzWADSkldbtxy', 'admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- Function to update updated_at timestamp

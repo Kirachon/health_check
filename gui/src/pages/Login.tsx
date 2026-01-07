@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
+import { useAuth } from '../context/auth';
+import { API_BASE_URL } from '../api/client';
 import '../styles/Login.css';
 
 const Login: React.FC = () => {
@@ -19,8 +21,25 @@ const Login: React.FC = () => {
         try {
             await login(username, password);
             navigate('/dashboard');
-        } catch (err: any) {
-            setError(err.response?.data?.detail || 'Login failed. Please try again.');
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                const detail = (err.response?.data as { detail?: string } | undefined)?.detail;
+                if (detail) {
+                    setError(detail);
+                } else if (err.code === 'ERR_NETWORK' || err.message === 'Network Error') {
+                    setError(`Cannot reach API at ${API_BASE_URL}. Is the FastAPI server running on port 8001?`);
+                } else if (err.code === 'ECONNABORTED') {
+                    setError('Login request timed out. Is the API server running?');
+                } else if (err.message) {
+                    setError(err.message);
+                } else {
+                    setError('Login failed. Please try again.');
+                }
+            } else if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Login failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

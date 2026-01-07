@@ -6,6 +6,7 @@ import signal
 import sys
 from pathlib import Path
 from typing import Dict
+from urllib.parse import urlparse, urlunparse
 import requests
 
 from collector import MetricsCollector
@@ -44,10 +45,10 @@ def register_device(config: Dict, device_info: Dict) -> Dict:
         return config
     
     # Register new device
-    server_api = config["server_url"].replace(":8428", ":8000")  # API server port
+    server_api = get_api_v1_url(config)
     try:
         response = requests.post(
-            f"{server_api}/api/v1/devices/register",
+            f"{server_api}/devices/register",
             json=device_info,
             timeout=10
         )
@@ -79,15 +80,46 @@ def send_heartbeat(config: Dict):
     if not config.get("device_id"):
         return
     
-    server_api = config["server_url"].replace(":8428", ":8000")
+    server_api = get_api_v1_url(config)
     try:
         response = requests.post(
-            f"{server_api}/api/v1/devices/{config['device_id']}/heartbeat",
+            f"{server_api}/devices/{config['device_id']}/heartbeat",
             timeout=5
         )
         response.raise_for_status()
     except requests.RequestException as e:
         logging.debug(f"Heartbeat failed: {e}")
+
+
+def get_api_v1_url(config: Dict) -> str:
+    """Return FastAPI base URL including /api/v1.
+
+    Prefer explicit `api_url` in config. Otherwise infer from `server_url` host and
+    assume FastAPI runs on port 8001 (project default).
+    """
+    api_url = (config.get("api_url") or "").strip()
+    if api_url:
+        api_url = api_url.rstrip("/")
+        return api_url if api_url.endswith("/api/v1") else f"{api_url}/api/v1"
+
+    server_url = (config.get("server_url") or "").strip().rstrip("/")
+    if not server_url:
+        # Safe default for local dev
+        return "http://localhost:8001/api/v1"
+
+    parsed = urlparse(server_url)
+    hostname = parsed.hostname or "localhost"
+    scheme = parsed.scheme or "http"
+
+    # Default FastAPI port for this project
+    netloc = f"{hostname}:8001"
+    if parsed.username or parsed.password:
+        auth = parsed.username or ""
+        if parsed.password:
+            auth = f"{auth}:{parsed.password}"
+        netloc = f"{auth}@{netloc}"
+
+    return urlunparse((scheme, netloc, "/api/v1", "", "", ""))
 
 
 def main():
@@ -135,7 +167,7 @@ def main():
     while not shutdown_requested:
         try:
             # Collect metrics
-            metrics_data = collector.collect_all_metrics(config.get("metrics", {}))
+            metrics_data = collector.collect_all_metrics(config)
             logger.debug(f"Collected {len(metrics_data)} metrics")
             
             # Send metrics

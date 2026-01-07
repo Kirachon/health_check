@@ -1,8 +1,13 @@
 import psutil
 import socket
 import platform
-from typing import Dict
+from typing import Dict, List
 from datetime import datetime
+import time
+import subprocess
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class MetricsCollector:
@@ -107,21 +112,109 @@ class MetricsCollector:
             "network_send_rate_mbps": bytes_sent_rate / (1024 ** 2),
             "network_recv_rate_mbps": bytes_recv_rate / (1024 ** 2)
         }
+
+    def collect_uptime_metrics(self) -> Dict[str, float]:
+        """Collect uptime metrics (system + storage I/O time counters when available)."""
+        metrics: Dict[str, float] = {}
+
+        # System uptime
+        boot_time = psutil.boot_time()
+        now = time.time()
+        metrics["system_boot_time"] = float(boot_time)
+        metrics["system_uptime_seconds"] = max(0.0, float(now - boot_time))
+
+        # Storage I/O time counters (closest proxy to "storage uptime" psutil provides)
+        # These are cumulative time spent doing disk I/O since boot (platform-dependent).
+        io_total = psutil.disk_io_counters()
+        if io_total:
+            # Bytes since boot
+            for key in ("read_bytes", "write_bytes"):
+                val = getattr(io_total, key, None)
+                if val is not None:
+                    metrics[f"disk_{key}_mb"] = float(val) / (1024 ** 2)
+
+            for key in ("read_time", "write_time", "busy_time"):
+                val = getattr(io_total, key, None)
+                if val is not None:
+                    metrics[f"disk_{key}_ms"] = float(val)
+
+        io_per_disk = psutil.disk_io_counters(perdisk=True)
+        if io_per_disk:
+            for disk_name, counters in io_per_disk.items():
+                disk_clean = str(disk_name).replace("\\", "_").replace("/", "_").replace(":", "_")
+                # Bytes since boot (per disk)
+                for key in ("read_bytes", "write_bytes"):
+                    val = getattr(counters, key, None)
+                    if val is not None:
+                        metrics[f"disk_{key}_mb_{disk_clean}"] = float(val) / (1024 ** 2)
+
+                for key in ("read_time", "write_time", "busy_time"):
+                    val = getattr(counters, key, None)
+                    if val is not None:
+                        metrics[f"disk_{key}_ms_{disk_clean}"] = float(val)
+
+        return metrics
     
+    def collect_user_parameters(self, params: List[Dict]) -> Dict[str, float]:
+        """Execute custom commands and collect their output as metrics."""
+        metrics: Dict[str, float] = {}
+        
+        for param in params:
+            name = param.get("name")
+            command = param.get("command")
+            if not name or not command:
+                continue
+                
+            try:
+                # Use shell=True to allow pipes and complex commands
+                # Use a timeout to prevent hanging the agent
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                
+                if result.returncode == 0:
+                    output = result.stdout.strip()
+                    try:
+                        metrics[f"custom_{name}"] = float(output)
+                    except ValueError:
+                        logger.warning(f"User parameter '{name}' output is not a number: '{output}'")
+                else:
+                    logger.error(f"User parameter '{name}' failed with return code {result.returncode}: {result.stderr}")
+            except subprocess.TimeoutExpired:
+                logger.error(f"User parameter '{name}' timed out after 5 seconds")
+            except Exception as e:
+                logger.error(f"Error executing user parameter '{name}': {e}")
+                
+        return metrics
+
     def collect_all_metrics(self, config: Dict) -> Dict[str, float]:
         """Collect all enabled metrics"""
         metrics = {}
         
-        if config.get("cpu", True):
+        # Standard metrics
+        metrics_config = config.get("metrics", {})
+        if metrics_config.get("cpu", True):
             metrics.update(self.collect_cpu_metrics())
         
-        if config.get("memory", True):
+        if metrics_config.get("memory", True):
             metrics.update(self.collect_memory_metrics())
         
-        if config.get("disk", True):
+        if metrics_config.get("disk", True):
             metrics.update(self.collect_disk_metrics())
         
-        if config.get("network", True):
+        if metrics_config.get("network", True):
             metrics.update(self.collect_network_metrics())
+
+        if metrics_config.get("uptime", True):
+            metrics.update(self.collect_uptime_metrics())
+            
+        # User parameters (custom scripts)
+        user_params = config.get("user_parameters", [])
+        if user_params:
+            metrics.update(self.collect_user_parameters(user_params))
         
         return metrics

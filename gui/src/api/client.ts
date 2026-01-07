@@ -1,7 +1,8 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
+export const REQUEST_TIMEOUT_MS = 15000;
 
 class APIClient {
     private client: AxiosInstance;
@@ -9,6 +10,7 @@ class APIClient {
     constructor() {
         this.client = axios.create({
             baseURL: API_BASE_URL,
+            timeout: REQUEST_TIMEOUT_MS,
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -35,9 +37,11 @@ class APIClient {
                     try {
                         const refreshToken = localStorage.getItem('refresh_token');
                         if (refreshToken) {
-                            const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-                                refresh_token: refreshToken,
-                            });
+                            const response = await axios.post(
+                                `${API_BASE_URL}/auth/refresh`,
+                                { refresh_token: refreshToken },
+                                { timeout: REQUEST_TIMEOUT_MS }
+                            );
 
                             const { access_token, refresh_token: newRefreshToken } = response.data;
                             localStorage.setItem('access_token', access_token);
@@ -94,6 +98,7 @@ class APIClient {
     async queryMetrics(query: string, start?: string, end?: string) {
         const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:9090';
         const response = await axios.get(`${vmUrl}/api/v1/query`, {
+            timeout: REQUEST_TIMEOUT_MS,
             params: { query, time: end || new Date().toISOString() },
         });
         return response.data;
@@ -102,6 +107,7 @@ class APIClient {
     async queryRangeMetrics(query: string, start: string, end: string, step = '30s') {
         const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:9090';
         const response = await axios.get(`${vmUrl}/api/v1/query_range`, {
+            timeout: REQUEST_TIMEOUT_MS,
             params: { query, start, end, step },
         });
         return response.data;

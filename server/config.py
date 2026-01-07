@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Any
+import json
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -21,10 +23,39 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:5173"]
+    BACKEND_CORS_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+    ]
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    def _parse_cors_origins(cls, v: Any):
+        # Allow env var forms:
+        # - JSON list: ["http://localhost:5174", ...]
+        # - Comma-separated: http://localhost:5174,http://localhost:5173
+        if isinstance(v, str):
+            raw = v.strip()
+            if not raw:
+                return []
+            if raw.startswith("["):
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, list):
+                        return [str(x).strip() for x in parsed if str(x).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [part.strip() for part in raw.split(",") if part.strip()]
+        return v
     
     # Security
     BCRYPT_ROUNDS: int = 12
+
+    # Device status
+    # If a device hasn't heartbeated within this window, treat it as offline.
+    DEVICE_OFFLINE_THRESHOLD_SECONDS: int = 90
     
     class Config:
         env_file = ".env"
