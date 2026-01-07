@@ -79,3 +79,4 @@ config/secrets/
 # Local one-off scripts (do not ship)
 server/reset_admin_password.py
 server/test_password.py
+server/test_output.txt

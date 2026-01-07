@@ -38,6 +38,11 @@ import Maps from './pages/Maps';
 import Discovery from './pages/Discovery';
 import SystemInfo from './pages/SystemInfo';
 import Configuration from './pages/Configuration';
+import HostGroups from './pages/HostGroups';
+import Templates from './pages/Templates';
+import Triggers from './pages/Triggers';
+import Actions from './pages/Actions';
+import UserManagement from './pages/UserManagement';
 
 function App() {
   return (
@@ -67,6 +72,11 @@ function App() {
           <Route path="/discovery" element={<ProtectedRoute><Discovery /></ProtectedRoute>} />
           <Route path="/system" element={<ProtectedRoute><SystemInfo /></ProtectedRoute>} />
           <Route path="/config" element={<ProtectedRoute><Configuration /></ProtectedRoute>} />
+          <Route path="/host-groups" element={<ProtectedRoute><HostGroups /></ProtectedRoute>} />
+          <Route path="/templates" element={<ProtectedRoute><Templates /></ProtectedRoute>} />
+          <Route path="/triggers" element={<ProtectedRoute><Triggers /></ProtectedRoute>} />
+          <Route path="/actions" element={<ProtectedRoute><Actions /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" />} />
         </Routes>
       </BrowserRouter>

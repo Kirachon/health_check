@@ -1,4 +1,4 @@
-import React, { useState, ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { apiClient } from '../api/client';
 import { AuthContext } from './auth';
 

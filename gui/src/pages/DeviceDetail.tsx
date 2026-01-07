@@ -187,7 +187,7 @@ const DeviceDetail: React.FC = () => {
                     const handleSeries = (
                         response: { data?: { result?: VmVectorSeries[] } } | undefined,
                         prefix: string,
-                        key: keyof Pick<StorageRow, 'percent' | 'totalGb' | 'usedGb' | 'freeGb'>
+                        key: keyof Pick<StorageRow, 'percent' | 'totalGb' | 'usedGb' | 'freeGb' | 'readMb' | 'writeMb' | 'readTimeMs' | 'writeTimeMs' | 'busyTimeMs'>
                     ) => {
                         const series = response?.data?.result ?? [];
                         for (const s of series) {
@@ -292,31 +292,31 @@ const DeviceDetail: React.FC = () => {
                     <h3>Storage</h3>
                     {storage.length > 0 ? (
                         <div className="device-info-panel">
-                    {storage.map((d) => (
-                        <div key={d.id} className="info-item">
-                            {(() => {
-                                const indicator = getStorageIndicator(d);
-                                return (
-                                    <span
-                                        title={indicator.label}
-                                        aria-label={indicator.label}
-                                        style={{
-                                            display: 'inline-block',
-                                            width: 10,
-                                            height: 10,
-                                            borderRadius: 9999,
-                                            backgroundColor: indicator.color,
-                                            marginRight: 8,
-                                            flex: '0 0 auto',
-                                        }}
-                                    />
-                                );
-                            })()}
-                            <span className="info-label">{d.label}:</span>
-                            <span>
-                                {d.percent != null ? `${d.percent.toFixed(1)}%` : '—'}
-                                {d.usedGb != null && d.totalGb != null
-                                    ? ` (${d.usedGb.toFixed(1)} / ${d.totalGb.toFixed(1)} GB)`
+                            {storage.map((d) => (
+                                <div key={d.id} className="info-item">
+                                    {(() => {
+                                        const indicator = getStorageIndicator(d);
+                                        return (
+                                            <span
+                                                title={indicator.label}
+                                                aria-label={indicator.label}
+                                                style={{
+                                                    display: 'inline-block',
+                                                    width: 10,
+                                                    height: 10,
+                                                    borderRadius: 9999,
+                                                    backgroundColor: indicator.color,
+                                                    marginRight: 8,
+                                                    flex: '0 0 auto',
+                                                }}
+                                            />
+                                        );
+                                    })()}
+                                    <span className="info-label">{d.label}:</span>
+                                    <span>
+                                        {d.percent != null ? `${d.percent.toFixed(1)}%` : '—'}
+                                        {d.usedGb != null && d.totalGb != null
+                                            ? ` (${d.usedGb.toFixed(1)} / ${d.totalGb.toFixed(1)} GB)`
                                             : ''}
                                         {d.freeGb != null ? `, free ${d.freeGb.toFixed(1)} GB` : ''}
                                     </span>

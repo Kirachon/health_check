@@ -2,16 +2,20 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Server,
   AlertTriangle,
   Map,
-  Settings,
   ChevronLeft,
   ChevronRight,
   Shield,
   Search,
   Activity,
-  LogOut
+  LogOut,
+  Layers,
+  FileCode,
+  BellRing,
+  Users,
+  Cpu,
+  Globe
 } from 'lucide-react';
 import { useAuth } from '../context/auth';
 import { useNavigate } from 'react-router-dom';
@@ -29,14 +33,33 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
     await logout();
     navigate('/login');
   };
-  const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { name: 'Devices', icon: Server, path: '/devices' },
-    { name: 'Alerts', icon: AlertTriangle, path: '/alerts' },
-    { name: 'Topology', icon: Map, path: '/map' },
-    { name: 'Discovery', icon: Search, path: '/discovery' },
-    { name: 'System Info', icon: Activity, path: '/system' },
-    { name: 'Configuration', icon: Settings, path: '/config' },
+  const navSections = [
+    {
+      title: 'Monitoring',
+      items: [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+        { name: 'Alerts', icon: AlertTriangle, path: '/alerts' },
+        { name: 'Topology', icon: Map, path: '/map' },
+      ]
+    },
+    {
+      title: 'Configuration',
+      items: [
+        { name: 'Host Groups', icon: Layers, path: '/host-groups' },
+        { name: 'Templates', icon: FileCode, path: '/templates' },
+        { name: 'Discovery', icon: Search, path: '/discovery' },
+        { name: 'Triggers', icon: Cpu, path: '/triggers' },
+        { name: 'Actions', icon: BellRing, path: '/actions' },
+      ]
+    },
+    {
+      title: 'Administration',
+      items: [
+        { name: 'User Management', icon: Users, path: '/users' },
+        { name: 'System Info', icon: Activity, path: '/system' },
+        { name: 'Global Config', icon: Globe, path: '/config' },
+      ]
+    }
   ];
 
   return (
@@ -56,21 +79,28 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-            title={collapsed ? item.name : ''}
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon className="nav-icon" size={20} />
-                {!collapsed && <span className="nav-text">{item.name}</span>}
-                {isActive && !collapsed && <div className="active-indicator" />}
-              </>
-            )}
-          </NavLink>
+        {navSections.map((section) => (
+          <div key={section.title} className="nav-section">
+            {!collapsed && <div className="section-title">{section.title}</div>}
+            <div className="section-items">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  title={collapsed ? item.name : ''}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <item.icon className="nav-icon" size={18} />
+                      {!collapsed && <span className="nav-text">{item.name}</span>}
+                      {isActive && !collapsed && <div className="active-indicator" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
@@ -159,10 +189,38 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
 
         .sidebar-nav {
           flex: 1;
-          padding: 1rem 0.75rem;
+          padding: 1rem 0.5rem;
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+          overflow-y: auto;
+          scrollbar-width: none;
+        }
+
+        .sidebar-nav::-webkit-scrollbar {
+          display: none;
+        }
+
+        .nav-section {
           display: flex;
           flex-direction: column;
           gap: 0.5rem;
+        }
+
+        .section-title {
+          padding: 0 0.75rem;
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--text-muted);
+          font-weight: 700;
+          opacity: 0.6;
+        }
+
+        .section-items {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
         }
 
         .nav-item {

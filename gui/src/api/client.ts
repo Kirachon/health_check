@@ -95,7 +95,7 @@ class APIClient {
     }
 
     // VictoriaMetrics query
-    async queryMetrics(query: string, start?: string, end?: string) {
+    async queryMetrics(query: string, _start?: string, end?: string) {
         const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:9090';
         const response = await axios.get(`${vmUrl}/api/v1/query`, {
             timeout: REQUEST_TIMEOUT_MS,
@@ -111,6 +111,129 @@ class APIClient {
             params: { query, start, end, step },
         });
         return response.data;
+    }
+
+    // Host Groups endpoints
+    async listHostGroups(params?: { skip?: number; limit?: number; search?: string }) {
+        const response = await this.client.get('/hostgroups', { params });
+        return response.data;
+    }
+
+    async getHostGroup(id: string) {
+        const response = await this.client.get(`/hostgroups/${id}`);
+        return response.data;
+    }
+
+    async createHostGroup(data: { name: string; description?: string }) {
+        const response = await this.client.post('/hostgroups', data);
+        return response.data;
+    }
+
+    async updateHostGroup(id: string, data: { name?: string; description?: string }) {
+        const response = await this.client.put(`/hostgroups/${id}`, data);
+        return response.data;
+    }
+
+    async deleteHostGroup(id: string) {
+        await this.client.delete(`/hostgroups/${id}`);
+    }
+
+    // Templates endpoints
+    async listTemplates(params?: { skip?: number; limit?: number; search?: string; template_type?: string }) {
+        const response = await this.client.get('/templates', { params });
+        return response.data;
+    }
+
+    async getTemplate(id: string) {
+        const response = await this.client.get(`/templates/${id}`);
+        return response.data;
+    }
+
+    async createTemplate(data: { name: string; description?: string; template_type?: string }) {
+        const response = await this.client.post('/templates', data);
+        return response.data;
+    }
+
+    async updateTemplate(id: string, data: { name?: string; description?: string; template_type?: string }) {
+        const response = await this.client.put(`/templates/${id}`, data);
+        return response.data;
+    }
+
+    async deleteTemplate(id: string) {
+        await this.client.delete(`/templates/${id}`);
+    }
+
+    async createTemplateItem(templateId: string, data: { name: string; key: string; value_type?: string; units?: string; update_interval?: number }) {
+        const response = await this.client.post(`/templates/${templateId}/items`, data);
+        return response.data;
+    }
+
+    async deleteTemplateItem(templateId: string, itemId: string) {
+        await this.client.delete(`/templates/${templateId}/items/${itemId}`);
+    }
+
+    // Triggers endpoints
+    async listTriggers(params?: { skip?: number; limit?: number; search?: string; severity?: string; enabled?: boolean; template_id?: string }) {
+        const response = await this.client.get('/triggers', { params });
+        return response.data;
+    }
+
+    async getTrigger(id: string) {
+        const response = await this.client.get(`/triggers/${id}`);
+        return response.data;
+    }
+
+    async createTrigger(data: { name: string; expression: string; severity?: string; description?: string; template_id?: string; enabled?: boolean }) {
+        const response = await this.client.post('/triggers', data);
+        return response.data;
+    }
+
+    async updateTrigger(id: string, data: { name?: string; expression?: string; severity?: string; description?: string; enabled?: boolean }) {
+        const response = await this.client.put(`/triggers/${id}`, data);
+        return response.data;
+    }
+
+    async deleteTrigger(id: string) {
+        await this.client.delete(`/triggers/${id}`);
+    }
+
+    async toggleTrigger(id: string) {
+        const response = await this.client.post(`/triggers/${id}/toggle`);
+        return response.data;
+    }
+
+    // Actions endpoints
+    async listActions(params?: { skip?: number; limit?: number; search?: string; action_type?: string; enabled?: boolean }) {
+        const response = await this.client.get('/actions', { params });
+        return response.data;
+    }
+
+    async getAction(id: string) {
+        const response = await this.client.get(`/actions/${id}`);
+        return response.data;
+    }
+
+    async createAction(data: { name: string; action_type?: string; conditions?: string; enabled?: boolean }) {
+        const response = await this.client.post('/actions', data);
+        return response.data;
+    }
+
+    async updateAction(id: string, data: { name?: string; action_type?: string; conditions?: string; enabled?: boolean }) {
+        const response = await this.client.put(`/actions/${id}`, data);
+        return response.data;
+    }
+
+    async deleteAction(id: string) {
+        await this.client.delete(`/actions/${id}`);
+    }
+
+    async createActionOperation(actionId: string, data: { operation_type: string; step_number?: number; parameters?: string }) {
+        const response = await this.client.post(`/actions/${actionId}/operations`, data);
+        return response.data;
+    }
+
+    async deleteActionOperation(actionId: string, operationId: string) {
+        await this.client.delete(`/actions/${actionId}/operations/${operationId}`);
     }
 }
 
