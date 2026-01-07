@@ -1,6 +1,7 @@
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance } from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
 
 class APIClient {
     private client: AxiosInstance;
@@ -91,7 +92,7 @@ class APIClient {
 
     // VictoriaMetrics query
     async queryMetrics(query: string, start?: string, end?: string) {
-        const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:8428';
+        const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:9090';
         const response = await axios.get(`${vmUrl}/api/v1/query`, {
             params: { query, time: end || new Date().toISOString() },
         });
@@ -99,7 +100,7 @@ class APIClient {
     }
 
     async queryRangeMetrics(query: string, start: string, end: string, step = '30s') {
-        const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:8428';
+        const vmUrl = import.meta.env.VITE_VM_URL || 'http://localhost:9090';
         const response = await axios.get(`${vmUrl}/api/v1/query_range`, {
             params: { query, start, end, step },
         });

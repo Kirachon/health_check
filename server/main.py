@@ -1,4 +1,5 @@
-from fastapi import FastAPI from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from db.models import Base, engine
 from api import auth, devices
