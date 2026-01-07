@@ -240,11 +240,19 @@ const DeviceDetail: React.FC = () => {
     }, [deviceId]);
 
     if (loading) {
-        return <div className="loading">Loading device details...</div>;
+        return (
+            <div className="device-detail-container">
+                <div className="loading">Loading device details...</div>
+            </div>
+        );
     }
 
     if (!device) {
-        return <div className="error">Device not found</div>;
+        return (
+            <div className="device-detail-container">
+                <div className="error">Device not found</div>
+            </div>
+        );
     }
 
     return (
@@ -259,7 +267,7 @@ const DeviceDetail: React.FC = () => {
             <div className="device-info-panel">
                 <div className="info-item">
                     <span className="info-label">Status:</span>
-                    <span className={`status-badge ${device.status}`}>{device.status}</span>
+                    <span className={`device-status-badge ${device.status}`}>{device.status}</span>
                 </div>
                 <div className="info-item">
                     <span className="info-label">Last Seen:</span>
@@ -341,10 +349,18 @@ const DeviceDetail: React.FC = () => {
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={cpuData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="time" />
-                                <YAxis domain={[0, 100]} />
-                                <Tooltip />
-                                <Legend />
+                                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)' }} />
+                                <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)' }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        background: 'rgba(15, 23, 42, 0.92)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: 8,
+                                        color: 'var(--text-main)',
+                                    }}
+                                    labelStyle={{ color: 'var(--text-muted)' }}
+                                />
+                                <Legend wrapperStyle={{ color: 'var(--text-muted)' }} />
                                 <Line type="monotone" dataKey="value" stroke="#8b5cf6" name="CPU %" />
                             </LineChart>
                         </ResponsiveContainer>
@@ -359,10 +375,18 @@ const DeviceDetail: React.FC = () => {
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={memoryData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="time" />
-                                <YAxis domain={[0, 100]} />
-                                <Tooltip />
-                                <Legend />
+                                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)' }} />
+                                <YAxis domain={[0, 100]} tick={{ fill: 'var(--text-muted)' }} />
+                                <Tooltip
+                                    contentStyle={{
+                                        background: 'rgba(15, 23, 42, 0.92)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: 8,
+                                        color: 'var(--text-main)',
+                                    }}
+                                    labelStyle={{ color: 'var(--text-muted)' }}
+                                />
+                                <Legend wrapperStyle={{ color: 'var(--text-muted)' }} />
                                 <Line type="monotone" dataKey="value" stroke="#10b981" name="Memory %" />
                             </LineChart>
                         </ResponsiveContainer>

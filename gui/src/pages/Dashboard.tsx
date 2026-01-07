@@ -11,6 +11,8 @@ import {
 import { apiClient } from '../api/client';
 import DeviceCard from '../components/DeviceCard';
 
+type CssVarProperties = React.CSSProperties & Record<`--${string}`, string | number>;
+
 interface Device {
     id: string;
     hostname: string;
@@ -65,6 +67,7 @@ const Dashboard: React.FC = () => {
     };
 
     const healthScore = stats.total > 0 ? Math.round((stats.online / stats.total) * 100) : 100;
+    const healthRingStyle: CssVarProperties = { '--percent': healthScore };
 
     return (
         <div className="spectacular-dashboard">
@@ -79,7 +82,7 @@ const Dashboard: React.FC = () => {
                         <div className="widget-value">{healthScore}% Healthy</div>
                         <div className="widget-sublabel">Across {stats.total} managed devices</div>
                     </div>
-                    <div className="health-ring" style={{ '--percent': healthScore } as any}>
+                    <div className="health-ring" style={healthRingStyle}>
                         <svg>
                             <circle cx="35" cy="35" r="30"></circle>
                             <circle
