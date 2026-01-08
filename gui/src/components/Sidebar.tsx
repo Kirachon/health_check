@@ -30,8 +30,8 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, setCollapsed }) => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    void logout();
+    navigate('/login', { replace: true });
   };
   const navSections = [
     {

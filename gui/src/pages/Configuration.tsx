@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import {
-    Settings,
     ShieldCheck,
     Server,
     BellRing,

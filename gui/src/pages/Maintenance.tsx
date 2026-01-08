@@ -3,7 +3,7 @@ import {
     Clock, Plus, Calendar, Trash2, Edit, Power, PowerOff,
     Server, Layers, Globe, CheckCircle, AlertTriangle
 } from 'lucide-react';
-import api from '../services/api';
+import { apiClient } from '../api/client';
 import '../styles/Maintenance.css';
 
 interface MaintenanceWindow {
@@ -59,16 +59,17 @@ const Maintenance: React.FC = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [windowsRes, devicesRes, hostgroupsRes] = await Promise.all([
-                api.get('/maintenance'),
-                api.get('/devices'),
-                api.get('/hostgroups')
+            const [windowsData, devicesData, hostgroupsData] = await Promise.all([
+                apiClient.listMaintenanceWindows(),
+                apiClient.listDevices(),
+                apiClient.listHostGroups()
             ]);
-            setWindows(windowsRes.data);
-            setDevices(devicesRes.data);
-            setHostgroups(hostgroupsRes.data);
+            setWindows(windowsData);
+            setDevices(devicesData);
+            setHostgroups(hostgroupsData);
         } catch (error) {
             console.error('Failed to fetch data:', error);
+            alert('Failed to load maintenance data. Ensure the API is running and try again.');
         } finally {
             setLoading(false);
         }
@@ -125,6 +126,34 @@ const Maintenance: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            const startMs = Date.parse(formData.start_time);
+            const endMs = Date.parse(formData.end_time);
+
+            if (!formData.name.trim()) {
+                alert('Name is required.');
+                return;
+            }
+
+            if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+                alert('Start and end times are required.');
+                return;
+            }
+
+            if (startMs >= endMs) {
+                alert('Start time must be before end time.');
+                return;
+            }
+
+            if (formData.scope_type === 'device' && !formData.device_id) {
+                alert('Select a device for Device scope.');
+                return;
+            }
+
+            if (formData.scope_type === 'hostgroup' && !formData.hostgroup_id) {
+                alert('Select a host group for Host Group scope.');
+                return;
+            }
+
             const payload = {
                 ...formData,
                 device_id: formData.scope_type === 'device' ? formData.device_id : null,
@@ -133,9 +162,9 @@ const Maintenance: React.FC = () => {
             };
 
             if (editingWindow) {
-                await api.put(`/maintenance/${editingWindow.id}`, payload);
+                await apiClient.updateMaintenanceWindow(editingWindow.id, payload);
             } else {
-                await api.post('/maintenance', payload);
+                await apiClient.createMaintenanceWindow(payload);
             }
 
             setShowModal(false);
@@ -143,25 +172,28 @@ const Maintenance: React.FC = () => {
             fetchData();
         } catch (error) {
             console.error('Failed to save maintenance window:', error);
+            alert('Failed to save maintenance window. Please try again.');
         }
     };
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this maintenance window?')) return;
         try {
-            await api.delete(`/maintenance/${id}`);
+            await apiClient.deleteMaintenanceWindow(id);
             fetchData();
         } catch (error) {
             console.error('Failed to delete:', error);
+            alert('Failed to delete maintenance window. Please try again.');
         }
     };
 
     const handleDeactivate = async (id: string) => {
         try {
-            await api.post(`/maintenance/${id}/deactivate`);
+            await apiClient.deactivateMaintenanceWindow(id);
             fetchData();
         } catch (error) {
             console.error('Failed to deactivate:', error);
+            alert('Failed to end maintenance. Please try again.');
         }
     };
 

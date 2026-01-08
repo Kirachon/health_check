@@ -74,7 +74,7 @@ const Maps: React.FC = () => {
     const fetchStatus = useCallback(async () => {
         if (!selectedMap) return;
         try {
-            const statusMap = await apiClient.client.get(`/maps/${selectedMap}/status`).then(res => res.data);
+            const statusMap = await apiClient.getMapStatus(selectedMap);
 
             setNodes((nds) => nds.map((node) => {
                 const status = statusMap[node.id];

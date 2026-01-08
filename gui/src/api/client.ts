@@ -4,6 +4,20 @@ import type { AxiosInstance } from 'axios';
 export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
 export const REQUEST_TIMEOUT_MS = 15000;
 
+type MaintenanceScopeType = 'all' | 'device' | 'hostgroup';
+
+export interface MaintenanceWindowUpsert {
+    name: string;
+    description?: string | null;
+    start_time: string;
+    end_time: string;
+    recurrence?: string | null;
+    scope_type: MaintenanceScopeType;
+    device_id?: string | null;
+    hostgroup_id?: string | null;
+    collect_data: boolean;
+}
+
 class APIClient {
     private client: AxiosInstance;
 
@@ -72,11 +86,20 @@ class APIClient {
 
     async logout() {
         const refreshToken = localStorage.getItem('refresh_token');
-        if (refreshToken) {
-            await this.client.post('/auth/logout', { refresh_token: refreshToken });
-        }
+
+        // Always clear local auth immediately so the UI can transition without waiting.
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+
+        // Best-effort server-side logout (optional; may fail if backend is down).
+        try {
+            if (refreshToken) {
+                await this.client.post('/auth/logout', { refresh_token: refreshToken });
+            }
+        } catch (error) {
+            // Local auth has already been cleared; keep this best-effort but observable.
+            console.warn('Server logout failed:', error);
+        }
     }
 
     // Device endpoints
@@ -290,6 +313,35 @@ class APIClient {
     async getMap(id: string) {
         const response = await this.client.get(`/maps/${id}`);
         return response.data;
+    }
+
+    async getMapStatus(id: string) {
+        const response = await this.client.get(`/maps/${id}/status`);
+        return response.data;
+    }
+
+    // Maintenance endpoints
+    async listMaintenanceWindows() {
+        const response = await this.client.get('/maintenance');
+        return response.data;
+    }
+
+    async createMaintenanceWindow(data: MaintenanceWindowUpsert) {
+        const response = await this.client.post('/maintenance', data);
+        return response.data;
+    }
+
+    async updateMaintenanceWindow(id: string, data: MaintenanceWindowUpsert) {
+        const response = await this.client.put(`/maintenance/${id}`, data);
+        return response.data;
+    }
+
+    async deleteMaintenanceWindow(id: string) {
+        await this.client.delete(`/maintenance/${id}`);
+    }
+
+    async deactivateMaintenanceWindow(id: string) {
+        await this.client.post(`/maintenance/${id}/deactivate`);
     }
 
     async createMap(data: { name: string; description?: string; width?: number; height?: number; background_image?: string }) {

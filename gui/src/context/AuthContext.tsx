@@ -14,8 +14,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const logout = async () => {
-        await apiClient.logout();
+        // Transition UI immediately; server-side logout is best-effort.
         setIsAuthenticated(false);
+        void apiClient.logout().catch((error) => console.warn('Logout failed:', error));
     };
 
     return (
