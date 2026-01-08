@@ -18,6 +18,9 @@ For local development on Windows/macOS/Linux, follow `README.md` quick start.
 Not currently “turn-key” in this repo:
 - **Everything-in-Docker (API+GUI containers)** as the only deployment method (API/GUI are run from the host in this guide).
 
+Windows deployments:
+- For a Windows-focused deployment guide (including a Docker reverse proxy for a single internal URL), see `docs/deployment/windows.md`.
+
 ## 📦 Air-Gapped / Offline Deployment (No Internet)
 
 If your environment has no internet access:
@@ -588,15 +591,14 @@ If Grafana is restarting in a loop, check provisioning errors (common causes: in
 
 ## 🪟 Windows Deployment Notes (Single Host)
 
-For an internal-only single-machine setup on Windows:
+For a Windows-focused deployment guide (including a Docker reverse proxy for a single internal URL), see `docs/deployment/windows.md`.
 
-1. Install Docker Desktop and enable Docker Compose.
-2. From the repo root, set required environment variables and start Docker:
-   - `POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `ALERT_WEBHOOK_TOKEN`
-3. Run the FastAPI server from `server/venv` (or as a Windows service).
-4. Run the GUI:
-   - dev: `npm run dev` (local)
-   - production: build `gui/dist` and serve it with IIS/Nginx/another internal web server.
+Quick outline (internal-only single-machine):
+
+1. Start the Docker stack from the repo root (`POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `ALERT_WEBHOOK_TOKEN` required).
+2. Run the FastAPI server from `server\venv` (or install it as a Windows service).
+3. Build the GUI (`gui\dist`).
+4. (Recommended) Use the Docker reverse proxy overlay: `deployment/docker-compose.windows-proxy.yml` and access the app via `http://localhost:8080/`.
 
 For Windows agents, use NSSM to run `agent\.venv\Scripts\python.exe agent\main.py` and store credentials in `agent/config.local.yaml`.
 
