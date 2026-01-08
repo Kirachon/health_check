@@ -2,9 +2,10 @@
 
 ## ✅ Prerequisites
 
+- Docker services running: `docker compose up -d` (Postgres/VictoriaMetrics/Grafana)
 - Backend running: `cd server && python main.py` → http://localhost:8001
 - Frontend running: `cd gui && npm run dev` → http://localhost:5173
-- Database migrated: `python -c "from db.models import Base, engine; Base.metadata.create_all(bind=engine)"`
+- Admin user created: `python scripts/create_admin.py --username admin --password "<YOUR_STRONG_PASSWORD>" --role admin`
 
 ---
 
@@ -27,6 +28,8 @@
 
 **API Test:**
 ```bash
+set ADMIN_USERNAME=admin
+set ADMIN_PASSWORD=<YOUR_STRONG_PASSWORD>
 python test_new_features.py
 # Should show: ✓ User CRUD operations successful
 ```
@@ -62,7 +65,7 @@ curl http://localhost:8001/api/v1/templates/agents/<device-id>/config
 ### 3️⃣ Alerting Engine (15 min)
 
 **Prerequisites:**
-- VictoriaMetrics running: `docker-compose up -d victoria` (port 9090)
+- VictoriaMetrics running: `docker compose up -d victoriametrics` (port 9090)
 - Backend logs showing: "Starting background alerting worker..."
 
 **Test Cases:**
@@ -95,8 +98,7 @@ curl http://localhost:8001/api/v1/alerts/summary/counts -H "Authorization: Beare
 ### Issue: "AlertEvent table not found"
 **Fix:**
 ```bash
-cd server
-python -c "from db.models import Base, engine; Base.metadata.create_all(bind=engine)"
+Start the backend once so it can create tables (the server runs `Base.metadata.create_all(...)` at startup).
 ```
 
 ### Issue: Alerting worker not running

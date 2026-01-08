@@ -15,7 +15,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The GUI will be available at http://localhost:5173 (or http://localhost:5174 if you run Vite with `--port 5174`).
+The GUI will be available at http://localhost:5173.
 
 ## Features
 
@@ -50,6 +50,19 @@ The GUI will be available at http://localhost:5173 (or http://localhost:5174 if 
 |----------|-------------|---------|
 | `VITE_API_URL` | FastAPI backend URL | `http://localhost:8001/api/v1` |
 | `VITE_VM_URL` | VictoriaMetrics URL | `http://localhost:9090` |
+
+## Troubleshooting
+
+- Dashboard shows “Failed to fetch devices”: verify the API is running and `VITE_API_URL` points to it.
+- Login redirects back to `/login`: clear `localStorage` tokens and log in again.
+
+## Production Build
+
+```bash
+npm run build
+```
+
+Serve `dist/` behind an internal reverse proxy (Nginx/Apache). This project is intended for internal networks only.
 
 ## Tech Stack
 

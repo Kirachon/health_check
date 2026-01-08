@@ -67,7 +67,7 @@ Set the token for Grafana (docker-compose example):
 
 ```yaml
 environment:
-  ALERT_WEBHOOK_TOKEN: "set-strong-token"
+  ALERT_WEBHOOK_TOKEN: "<YOUR_RANDOM_TOKEN>"
 ```
 
 ## Alert Routing
@@ -177,6 +177,10 @@ Edit `config/alertmanager/alertmanager.yml` for custom routing rules.
 - Check Grafana logs: `docker logs health_monitor_grafana`
 - Verify datasource connection
 - Test alert rule manually in Grafana UI
+
+**Grafana restarting in a loop:**
+- Check `docker logs --tail 200 health_monitor_grafana`
+- Common cause: invalid alert rule provisioning YAML (for provisioned rules, each rule group must set a `folder`).
 
 **Notifications not received:**
 - Verify contact point configuration

@@ -3,6 +3,11 @@
 ## 📋 Overview
 
 This guide covers deploying the Health Monitor system to production on Ubuntu/Debian servers.
+For local development on Windows/macOS/Linux, follow `README.md` quick start.
+
+> ⚠️ **CRITICAL SECURITY WARNING:** This project is intended for internal server/department networks only. Do not expose service ports (Postgres, VictoriaMetrics, Grafana) publicly.
+>
+> Only expose `80/443` via your reverse proxy. Block direct access to `5433` (Postgres), `9090` (VictoriaMetrics), `3001` (Grafana), and `9094` (Alertmanager).
 
 ## 🎯 New Port Configuration
 
@@ -15,7 +20,7 @@ All services use **non-standard ports** for security and conflict avoidance:
 | Grafana | **3001** | http://localhost:3001 |
 | Alertmanager | **9094** | http://localhost:9094 |
 | FastAPI | **8001** | http://localhost:8001/docs |
-| React GUI | **5174** (dev) | http://localhost:5174 |
+| React GUI | **5173** (dev) | http://localhost:5173 |
 
 **Production (via Nginx):** All services accessible through `https://yourdomain.com`
 
@@ -28,6 +33,8 @@ All services use **non-standard ports** for security and conflict avoidance:
 - Root access
 - Domain name pointing to server
 - Ports 80, 443 open in firewall
+
+Note: this guide uses `docker-compose` on Ubuntu/Debian. If your system uses the newer plugin, replace with `docker compose`.
 
 ### One-Command Install
 
@@ -103,6 +110,7 @@ sudo nano .env
 # - SECRET_KEY (use generated key)
 # - DATABASE_URL (already set to port 5433)
 # - VICTORIA_METRICS_URL (already set to port 9090)
+# - ALERT_WEBHOOK_TOKEN (required if ALERT_WEBHOOK_REQUIRE_TOKEN=true; use a strong random token, e.g. 64 hex chars = 32 bytes)
 ```
 
 ### Step 4: Agent Setup
@@ -144,6 +152,7 @@ npm run build
 
 ```bash
 cd /opt/health-monitor
+export ALERT_WEBHOOK_TOKEN="$(openssl rand -hex 32)"
 sudo docker-compose up -d
 
 # Verify services
@@ -216,7 +225,7 @@ sudo chmod -R 750 /opt/health-monitor
 
 ## 🔒 Security Hardening
 
-### 1. Change Default Passwords
+### Change Default Passwords
 
 ```bash
 # PostgreSQL
@@ -227,22 +236,22 @@ ALTER USER monitor_user WITH PASSWORD 'new-secure-password';
 # Update server/.env with new password
 ```
 
-### 2. Set Admin Credentials
+### Set Admin Credentials
 
 Create the initial admin user via `scripts/create_admin.py` and store credentials securely.
 If upgrading, run the script if no admin accounts exist.
 
-### 3. Lock Down Grafana
+### Lock Down Grafana
 
 - Set `GF_SECURITY_ADMIN_USER` and `GF_SECURITY_ADMIN_PASSWORD` to strong values.
 - Ensure Grafana is not exposed outside internal networks.
 
-### 4. Configure Alert Webhook Token
+### Configure Alert Webhook Token
 
 - Set `ALERT_WEBHOOK_TOKEN` in `server/.env` and in the Grafana service environment.
 - Rotate the token before distributing to other departments.
 
-### 5. Configure Firewall
+### Configure Firewall
 
 ```bash
 # UFW (Ubuntu)
@@ -258,7 +267,7 @@ sudo ufw deny 9094
 sudo ufw deny 8001
 ```
 
-### 6. Secure JWT Secret
+### Secure JWT Secret
 
 Generate a strong secret key (already done in automated install):
 
@@ -271,7 +280,7 @@ Add to `server/.env`:
 SECRET_KEY=your-generated-secret-key-here
 ```
 
-### 4. Enable Fail2Ban (Optional)
+### Enable Fail2Ban (Optional)
 
 ```bash
 sudo apt-get install fail2ban
@@ -283,7 +292,7 @@ sudo systemctl start fail2ban
 
 ## 📊 Post-Deployment Verification
 
-### 1. Check Service Health
+### Check Service Health
 
 ```bash
 # Docker services
@@ -297,7 +306,7 @@ sudo systemctl status health-monitor-agent
 sudo systemctl status nginx
 ```
 
-### 2. Test Endpoints
+### Test Endpoints
 
 ```bash
 # API health
@@ -310,7 +319,7 @@ curl https://yourdomain.com/grafana/api/health
 curl http://localhost:9090/health
 ```
 
-### 3. Access Web Interfaces
+### Access Web Interfaces
 
 - **Admin Dashboard:** https://yourdomain.com
 - **API Documentation:** https://yourdomain.com/api/v1/docs
@@ -453,6 +462,8 @@ sudo docker logs health_monitor_grafana
 # Restart
 sudo docker-compose restart grafana
 ```
+
+If Grafana is restarting in a loop, check provisioning errors (common causes: invalid YAML, missing alert rule `folder` in provisioned rule groups, or missing required environment variables like `ALERT_WEBHOOK_TOKEN`).
 
 ---
 

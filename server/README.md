@@ -15,8 +15,8 @@ pip install -r requirements.txt
 # Copy environment config
 cp .env.example .env
 
-# Run database migrations (PostgreSQL should be running)
-# Ensure docker-compose is up: docker-compose up -d postgres
+# Start Postgres/VictoriaMetrics/Grafana via Docker first:
+#   docker compose up -d
 
 # Run server
 python main.py
@@ -59,3 +59,13 @@ pytest --cov=. --cov-report=html
 ## Admin Bootstrap
 
 Create the first admin user via `scripts/create_admin.py` (do not ship default credentials).
+
+Example:
+```bash
+python scripts/create_admin.py --username admin --password "<YOUR_STRONG_PASSWORD>" --role admin
+```
+
+## Troubleshooting
+
+- `Errno 10048` / port bind error: port `8001` is already in use. Stop the existing process or run with `PORT=8002`.
+- Login fails / UI can’t reach API: confirm `server/.env` is present and the server is listening on `http://localhost:8001`.
