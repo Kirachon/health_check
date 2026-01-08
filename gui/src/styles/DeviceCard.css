@@ -1,10 +1,12 @@
+/* DeviceCard.css - Dark Theme Refactor */
+
 .delete-button:hover {
-    background: #fee2e2;
+    background: rgba(239, 68, 68, 0.15);
 }
 
 .device-hostname {
     margin: 0 0 1rem 0;
-    color: #1f2937;
+    color: var(--text-main);
     font-size: 1.25rem;
 }
 
@@ -16,7 +18,7 @@
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: var(--glass-border);
 }
 
 .detail-row:last-child {
@@ -24,27 +26,28 @@
 }
 
 .detail-label {
-    color: #6b7280;
+    color: var(--text-muted);
     font-weight: 500;
 }
 
 .detail-value {
-    color: #1f2937;
+    color: var(--text-main);
     font-weight: 600;
 }
 
 .view-details-button {
     width: 100%;
     padding: 0.75rem;
-    background: #667eea;
-    color: white;
+    background: var(--accent-secondary);
+    color: var(--text-main);
     border: none;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .view-details-button:hover {
-    background: #5568d3;
+    background: #0284c7;
+    box-shadow: var(--glow-blue);
 }

@@ -1,0 +1,383 @@
+/* Maps.css - Premium Network Maps Styling */
+
+.maps-page {
+    height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+}
+
+/* ===== HEADER / TOOLBAR ===== */
+.maps-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.5rem;
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: 12px;
+}
+
+.maps-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.maps-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin: 0;
+    background: linear-gradient(135deg, var(--text-main) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.maps-select {
+    min-width: 220px;
+    padding: 0.6rem 1rem;
+    background: var(--bg-slate);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.maps-select:hover,
+.maps-select:focus {
+    border-color: var(--accent-secondary);
+    box-shadow: var(--glow-blue);
+    outline: none;
+}
+
+/* ===== BUTTONS ===== */
+.maps-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.maps-btn-secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.maps-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 12px rgba(14, 165, 233, 0.2);
+}
+
+.maps-btn-primary {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    color: white;
+}
+
+.maps-btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+.maps-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ===== MAP CANVAS ===== */
+.maps-canvas {
+    flex: 1;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    background: linear-gradient(180deg, #0f172a 0%, #0c1222 50%, #0a0f1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 100px rgba(14, 165, 233, 0.03);
+}
+
+/* ReactFlow Custom Styles */
+.maps-canvas .react-flow__background {
+    opacity: 0.4;
+}
+
+.maps-canvas .react-flow__controls {
+    background: var(--bg-slate);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.maps-canvas .react-flow__controls-button {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.maps-canvas .react-flow__controls-button:last-child {
+    border-bottom: none;
+}
+
+.maps-canvas .react-flow__controls-button:hover {
+    background: rgba(14, 165, 233, 0.15);
+    color: var(--accent-secondary);
+}
+
+.maps-canvas .react-flow__controls-button svg {
+    fill: currentColor;
+}
+
+/* Attribution */
+.maps-canvas .react-flow__attribution {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+.maps-canvas .react-flow__attribution a {
+    color: var(--text-dim);
+}
+
+/* ===== CUSTOM NODES ===== */
+.maps-canvas .react-flow__node {
+    background: linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(14, 165, 233, 0.05);
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+.maps-canvas .react-flow__node:hover {
+    border-color: var(--accent-secondary);
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.5),
+        0 0 25px rgba(14, 165, 233, 0.15);
+    transform: translateY(-2px);
+}
+
+.maps-canvas .react-flow__node.selected {
+    border-color: var(--accent-primary);
+    box-shadow:
+        0 0 0 2px rgba(16, 185, 129, 0.3),
+        0 8px 30px rgba(0, 0, 0, 0.5),
+        0 0 30px rgba(16, 185, 129, 0.2);
+}
+
+/* Node Status Indicators */
+.maps-canvas .react-flow__node[style*="--success-color"],
+.maps-canvas .react-flow__node.node-online {
+    border-color: var(--accent-primary);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.maps-canvas .react-flow__node[style*="--error-color"],
+.maps-canvas .react-flow__node.node-offline {
+    border-color: var(--accent-error);
+    box-shadow:
+        0 4px 20px rgba(0, 0, 0, 0.4),
+        0 0 20px rgba(239, 68, 68, 0.2);
+}
+
+/* Node Handles (connection points) */
+.maps-canvas .react-flow__handle {
+    width: 10px;
+    height: 10px;
+    background: var(--accent-secondary);
+    border: 2px solid var(--bg-slate);
+    transition: all 0.2s;
+}
+
+.maps-canvas .react-flow__handle:hover {
+    background: var(--accent-primary);
+    transform: scale(1.3);
+}
+
+/* ===== EDGES ===== */
+.maps-canvas .react-flow__edge-path {
+    stroke: rgba(14, 165, 233, 0.5);
+    stroke-width: 2;
+}
+
+.maps-canvas .react-flow__edge.selected .react-flow__edge-path {
+    stroke: var(--accent-primary);
+    stroke-width: 3;
+}
+
+.maps-canvas .react-flow__edge:hover .react-flow__edge-path {
+    stroke: var(--accent-secondary);
+}
+
+/* ===== EMPTY STATE ===== */
+.maps-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: var(--text-dim);
+    gap: 1rem;
+}
+
+.maps-empty-icon {
+    opacity: 0.3;
+    color: var(--accent-secondary);
+}
+
+.maps-empty h3 {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.maps-empty p {
+    color: var(--text-dim);
+    margin: 0;
+}
+
+/* ===== MODALS ===== */
+.maps-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.maps-modal {
+    background: var(--bg-slate);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 1.5rem;
+    min-width: 380px;
+    max-width: 520px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.maps-modal h2 {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.25rem;
+    color: var(--text-main);
+}
+
+.maps-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Form inside modal */
+.maps-modal .form-group {
+    margin-bottom: 1rem;
+}
+
+.maps-modal .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.maps-modal .form-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.95rem;
+}
+
+.maps-modal .form-group input:focus {
+    outline: none;
+    border-color: var(--accent-secondary);
+    box-shadow: var(--glow-blue);
+}
+
+/* Device list table in modal */
+.maps-modal .device-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+.maps-modal .device-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.maps-modal .device-list th,
+.maps-modal .device-list td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.maps-modal .device-list th {
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.maps-modal .device-list td {
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.maps-modal .device-list tr:hover {
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.maps-modal .device-list .btn-add {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    background: var(--accent-secondary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.maps-modal .device-list .btn-add:hover {
+    background: var(--accent-primary);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}

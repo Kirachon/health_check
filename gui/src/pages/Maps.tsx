@@ -12,9 +12,11 @@ import {
 } from '@xyflow/react';
 import type { Connection, Edge, Node, NodeChange, EdgeChange } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import '../styles/Maps.css';
 import {
     Plus,
-    Server
+    Server,
+    Map as MapIcon
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 
@@ -309,35 +311,34 @@ const Maps: React.FC = () => {
     };
 
     return (
-        <div className="page-container" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+        <div className="maps-page">
             {/* Header / Toolbar */}
-            <div className="page-header" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <h1 className="page-title">Network Maps</h1>
+            <div className="maps-header">
+                <div className="maps-header-left">
+                    <h1 className="maps-title">Network Maps</h1>
                     <select
                         value={selectedMap || ''}
                         onChange={(e) => setSelectedMap(e.target.value)}
-                        className="form-input"
-                        style={{ minWidth: '200px' }}
+                        className="maps-select"
                     >
                         {maps.map(m => (
                             <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                     </select>
-                    <button className="btn btn-secondary" onClick={() => setShowCreateModal(true)}>
+                    <button className="maps-btn maps-btn-secondary" onClick={() => setShowCreateModal(true)}>
                         <Plus size={16} /> New Map
                     </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-primary" onClick={loadDevices} disabled={!selectedMap}>
+                    <button className="maps-btn maps-btn-primary" onClick={loadDevices} disabled={!selectedMap}>
                         <Server size={16} /> Add Device
                     </button>
                 </div>
             </div>
 
             {/* Map Canvas */}
-            <div style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-card)' }}>
+            <div className="maps-canvas">
                 {selectedMap ? (
                     <ReactFlow
                         nodes={nodes}
@@ -350,33 +351,33 @@ const Maps: React.FC = () => {
                         attributionPosition="bottom-right"
                     >
                         <Controls />
-                        <Background color="#555" gap={16} />
+                        <Background color="#1e3a5f" gap={24} size={1.5} />
                     </ReactFlow>
                 ) : (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-secondary)' }}>
-                        Select or create a map to get started
+                    <div className="maps-empty">
+                        <MapIcon size={64} className="maps-empty-icon" />
+                        <h3>No Map Selected</h3>
+                        <p>Select or create a map to visualize your network</p>
                     </div>
                 )}
             </div>
-
             {/* Create Map Modal */}
             {showCreateModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
+                <div className="maps-modal-overlay" onClick={() => setShowCreateModal(false)}>
+                    <div className="maps-modal" onClick={(e) => e.stopPropagation()}>
                         <h2>Create New Map</h2>
                         <div className="form-group">
                             <label>Map Name</label>
                             <input
                                 type="text"
-                                className="form-input"
                                 value={newMapName}
                                 onChange={(e) => setNewMapName(e.target.value)}
                                 placeholder="e.g. Core Network"
                             />
                         </div>
-                        <div className="modal-actions">
-                            <button className="btn btn-text" onClick={() => setShowCreateModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={handleCreateMap}>Create</button>
+                        <div className="maps-modal-actions">
+                            <button className="maps-btn maps-btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
+                            <button className="maps-btn maps-btn-primary" onClick={handleCreateMap}>Create Map</button>
                         </div>
                     </div>
                 </div>
@@ -384,15 +385,15 @@ const Maps: React.FC = () => {
 
             {/* Add Element Modal */}
             {showElementModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                <div className="maps-modal-overlay" onClick={() => setShowElementModal(false)}>
+                    <div className="maps-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
                         <h2>Add Device to Map</h2>
-                        <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                            <table className="data-table">
+                        <div className="device-list">
+                            <table>
                                 <thead>
                                     <tr>
                                         <th>Hostname</th>
-                                        <th>IP</th>
+                                        <th>IP Address</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -400,10 +401,10 @@ const Maps: React.FC = () => {
                                     {availableDevices.map(d => (
                                         <tr key={d.id}>
                                             <td>{d.hostname}</td>
-                                            <td>{d.ip}</td>
+                                            <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{d.ip}</td>
                                             <td>
                                                 <button
-                                                    className="btn btn-sm btn-secondary"
+                                                    className="btn-add"
                                                     onClick={() => handleAddDevice(d.id)}
                                                 >
                                                     Add
@@ -414,8 +415,8 @@ const Maps: React.FC = () => {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="modal-actions" style={{ marginTop: '1rem' }}>
-                            <button className="btn btn-text" onClick={() => setShowElementModal(false)}>Close</button>
+                        <div className="maps-modal-actions">
+                            <button className="maps-btn maps-btn-secondary" onClick={() => setShowElementModal(false)}>Close</button>
                         </div>
                     </div>
                 </div>
