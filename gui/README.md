@@ -17,6 +17,10 @@ npm run dev
 
 The GUI will be available at http://localhost:5173.
 
+## Prerequisites
+
+- Node.js 20.19+ or 22.12+ *(Vite 7 requirement)*
+
 ## Features
 
 - 🔐 JWT Authentication with token refresh
@@ -66,7 +70,7 @@ Serve `dist/` behind an internal reverse proxy (Nginx/Apache). This project is i
 
 ## Tech Stack
 
-- **React 18** - UI framework
+- **React** - UI framework (see `gui/package.json` for current version)
 - **TypeScript** - Type safety
 - **Vite** - Build tool
 - **React Router** - Routing

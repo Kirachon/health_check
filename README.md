@@ -13,7 +13,7 @@
 ### Prerequisites
 - Docker + Docker Compose (or Docker Desktop on Windows)
 - Python 3.11+ (server + agent)
-- Node.js 18+ (GUI)
+- Node.js 20.19+ or 22.12+ (GUI) *(Vite 7 requires this; older Node may warn or fail to build)*
 
 ### 1. Start Infrastructure (Docker)
 
@@ -79,8 +79,17 @@ python main.py
 # Backend API: http://localhost:8001
 ```
 Create an admin user before logging in:
+
+Note: run these commands from the **repository root** (the same folder as `docker-compose.yml`).
+
+Windows (PowerShell):
+```powershell
+./server/venv/Scripts/python.exe ./scripts/create_admin.py --username admin --password "<YOUR_STRONG_PASSWORD>" --role admin
+```
+
+Linux/macOS:
 ```bash
-python scripts/create_admin.py --username admin --password "<YOUR_STRONG_PASSWORD>" --role admin
+./server/venv/bin/python ./scripts/create_admin.py --username admin --password "<YOUR_STRONG_PASSWORD>" --role admin
 ```
 
 ### 5. Run Frontend (Optional)

@@ -33,6 +33,7 @@ All services use **non-standard ports** for security and conflict avoidance:
 - Root access
 - Domain name pointing to server
 - Ports 80, 443 open in firewall
+- Node.js 20.19+ or 22.12+ for building the GUI *(Vite 7 requirement)*
 
 Note: this guide uses `docker-compose` on Ubuntu/Debian. If your system uses the newer plugin, replace with `docker compose`.
 
