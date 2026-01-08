@@ -9,6 +9,42 @@ For local development on Windows/macOS/Linux, follow `README.md` quick start.
 >
 > Only expose `80/443` via your reverse proxy. Block direct access to `5433` (Postgres), `9090` (VictoriaMetrics), `3001` (Grafana), and `9094` (Alertmanager).
 
+## ✅ Supported Deployment Scenarios
+
+- **Single machine (internal-only):** Docker stack + API + GUI on one host (Windows or Linux).
+- **Central server + many agents:** Linux server runs Docker stack + API + GUI; agents run on Windows/Linux servers.
+- **No-internet / restricted internet:** Works fully inside your network. For the strongest guarantee, enforce egress allow-listing at the firewall.
+
+Not currently “turn-key” in this repo:
+- **Everything-in-Docker (API+GUI containers)** as the only deployment method (API/GUI are run from the host in this guide).
+
+## 📦 Air-Gapped / Offline Deployment (No Internet)
+
+If your environment has no internet access:
+
+- **Do not** use the `curl ... | bash` installer.
+- Mirror this repo to an internal Git server **or** copy a source archive into your environment.
+- Pre-stage dependencies from a machine with internet:
+  - Docker images: `docker pull` the required images, then `docker save` them to a `.tar`, and `docker load` inside the offline environment.
+  - GUI build: build `gui/dist` on a connected build machine and copy only `gui/dist` into the offline environment (recommended), or provide an internal npm registry / offline cache.
+
+Production does **not** need `npm install` on the server if you ship `gui/dist` as a build artifact.
+
+Required Docker images (from `docker-compose.yml`):
+- `victoriametrics/victoria-metrics:latest`
+- `postgres:15-alpine`
+- `grafana/grafana:latest`
+- `prom/alertmanager:latest`
+
+Example export/import (run on a connected machine, then copy the `.tar` into the offline environment):
+```bash
+docker pull victoriametrics/victoria-metrics:latest postgres:15-alpine grafana/grafana:latest prom/alertmanager:latest
+docker save -o health-monitor-images.tar victoriametrics/victoria-metrics:latest postgres:15-alpine grafana/grafana:latest prom/alertmanager:latest
+
+# In the offline environment:
+docker load -i health-monitor-images.tar
+```
+
 ## 🎯 New Port Configuration
 
 All services use **non-standard ports** for security and conflict avoidance:
@@ -65,6 +101,19 @@ The script will:
 
 ## 📦 Manual Deployment
 
+## 🔐 Required Secrets (Do Not Commit)
+
+The Docker stack and API require secrets. Provide them via environment variables or a root `.env` file on the server:
+
+- `POSTGRES_PASSWORD` (Docker Postgres)
+- `GRAFANA_ADMIN_PASSWORD` (Docker Grafana)
+- `ALERT_WEBHOOK_TOKEN` (Grafana → API webhook ingestion)
+- `SECRET_KEY` (FastAPI JWT secret, in `server/.env`)
+
+Optional depending on enrollment mode:
+- `DEVICE_REGISTRATION_MODE` (default: `admin`)
+- `DEVICE_REGISTRATION_TOKEN` (required only when `DEVICE_REGISTRATION_MODE=token`)
+
 ### Step 1: System Preparation
 
 ```bash
@@ -112,6 +161,8 @@ sudo nano .env
 # - DATABASE_URL (already set to port 5433)
 # - VICTORIA_METRICS_URL (already set to port 9090)
 # - ALERT_WEBHOOK_TOKEN (required if ALERT_WEBHOOK_REQUIRE_TOKEN=true; use a strong random token, e.g. 64 hex chars = 32 bytes)
+# - DEVICE_REGISTRATION_MODE (recommended: `admin` for admin-only enrollment)
+# - DEVICE_REGISTRATION_TOKEN (only if DEVICE_REGISTRATION_MODE=token)
 ```
 
 ### Step 4: Agent Setup
@@ -126,9 +177,13 @@ pip install -r requirements.txt
 deactivate
 
 # Configure agent
-nano config.yaml
+cp config.yaml config.local.yaml
+# config.yaml is the template; config.local.yaml is your local runtime config (gitignored) where secrets/tokens live.
+nano config.local.yaml
 # Update server_url to point to your production server
 ```
+
+Always edit `config.local.yaml` (not `config.yaml`) on real deployments, and keep it out of source control.
 
 ### Step 5: Frontend Build
 
@@ -149,16 +204,29 @@ nano .env
 npm run build
 ```
 
+This produces `gui/dist/`. In production, your reverse proxy (Nginx) should serve these static files and route API paths to FastAPI.
+
 ### Step 6: Start Docker Services
 
 ```bash
 cd /opt/health-monitor
+export POSTGRES_PASSWORD="$(openssl rand -hex 16)"
+export GRAFANA_ADMIN_PASSWORD="$(openssl rand -hex 16)"
 export ALERT_WEBHOOK_TOKEN="$(openssl rand -hex 32)"
 sudo docker-compose up -d
 
 # Verify services
 sudo docker-compose ps
 ```
+
+For persistence across reboots, put these values into `/opt/health-monitor/.env` (same directory as `docker-compose.yml`)
+instead of relying on `export` in a single shell session.
+
+By default, Docker ports are bound to `127.0.0.1` for safety (not reachable from other machines).
+⚠️ Security note: changing a mapping from `127.0.0.1:PORT:PORT` to `0.0.0.0:PORT:PORT` exposes that service to your network. Do this only if required, and then firewall/VLAN restrict it to your internal subnets.
+
+If you need other internal machines to reach these services, edit the `ports:` mappings in `docker-compose.yml`
+and restrict access with firewall rules / VLANs.
 
 ### Step 7: Configure Systemd Services
 
@@ -206,6 +274,20 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
+This Nginx config serves the production GUI build from `/opt/health-monitor/gui/dist`.
+If you previously used a Vite dev server proxy, run `npm run build` in `gui/`, then reload Nginx.
+
+#### 🔄 Migration from Dev Proxy Setup
+
+If you previously ran the GUI in production via a Vite dev server (or Nginx proxy to `localhost:5173/5174`), migrate to the supported production setup:
+1. Stop the Vite dev server.
+2. Build the GUI: `cd /opt/health-monitor/gui && npm run build`.
+3. Ensure Nginx serves `/opt/health-monitor/gui/dist` (see `deployment/nginx/health-monitor.conf`).
+4. Reload Nginx: `sudo systemctl reload nginx`.
+5. Validate:
+   - `test -f /opt/health-monitor/gui/dist/index.html`
+   - `curl -I https://yourdomain.com/` returns `200` (or `302` to your login route)
+
 ### Step 9: Obtain SSL Certificate
 
 ```bash
@@ -214,6 +296,9 @@ sudo certbot --nginx -d yourdomain.com
 
 # Certificate auto-renewal is configured automatically
 ```
+
+Internal networks often use an internal CA instead of Let's Encrypt. In that case, install your internal TLS cert/key
+and update the SSL paths in `deployment/nginx/health-monitor.conf`.
 
 ### Step 10: Set Permissions
 
@@ -228,19 +313,44 @@ sudo chmod -R 750 /opt/health-monitor
 
 ### Change Default Passwords
 
+For a fresh install, set strong secrets **before the first** `docker-compose up -d`:
+
+- `POSTGRES_PASSWORD` (Postgres init password)
+- `GRAFANA_ADMIN_PASSWORD` (Grafana admin password)
+- `ALERT_WEBHOOK_TOKEN` (required token for Grafana → API webhook)
+
+If you already have a running instance and want to rotate the Postgres password:
+
 ```bash
-# PostgreSQL
 sudo docker exec -it health_monitor_db psql -U monitor_user -d health_monitor
 ALTER USER monitor_user WITH PASSWORD 'new-secure-password';
 \q
-
-# Update server/.env with new password
 ```
 
-### Set Admin Credentials
+Then update `server/.env` so the API uses the new password in `DATABASE_URL`.
 
-Create the initial admin user via `scripts/create_admin.py` and store credentials securely.
-If upgrading, run the script if no admin accounts exist.
+Note: `POSTGRES_PASSWORD` in `docker-compose.yml` is mainly used for the **initial** database creation. If you already have a persisted volume, changing the env var alone will not change the live DB password (rotate it inside Postgres as shown above).
+
+### Create the Initial Admin User (Required)
+
+Run this once after the database is up and `server/.env` is configured:
+
+Linux:
+```bash
+cd /opt/health-monitor/server
+source venv/bin/activate
+python ../scripts/create_admin.py --username admin --password "change-me" --role admin
+deactivate
+```
+
+Windows:
+```powershell
+$INSTALL_PATH = "C:\health-monitor"  # adjust
+Set-Location "$INSTALL_PATH\server"
+.\venv\Scripts\python.exe ..\scripts\create_admin.py --username admin --password "change-me" --role admin
+```
+
+Store the credentials securely and rotate them immediately after first login.
 
 ### Lock Down Grafana
 
@@ -267,6 +377,16 @@ sudo ufw deny 3001
 sudo ufw deny 9094
 sudo ufw deny 8001
 ```
+
+### No-Internet Egress (Strongest “No Leak Outside” Control)
+
+If you must guarantee the system cannot send data to the internet, enforce it at the firewall:
+
+- Allow outbound only to **internal subnets** (your LAN/VLAN ranges).
+- Optionally allow outbound to internal DNS/NTP if required.
+- Block outbound to the public internet.
+
+This control is stronger than any application-level setting.
 
 ### Secure JWT Secret
 
@@ -326,8 +446,6 @@ curl http://localhost:9090/health
 - **API Documentation:** https://yourdomain.com/api/v1/docs
 - **Grafana:** https://yourdomain.com/grafana
 
-Create the initial admin via `scripts/create_admin.py` after deployment.
-
 ---
 
 ## 🖥️ Agent Deployment (Monitored Devices)
@@ -352,14 +470,16 @@ pip install -r requirements.txt
 deactivate
 
 # 5. Configure agent
-nano config.yaml
+cp config.yaml config.local.yaml
+nano config.local.yaml
+# config.yaml is the template; config.local.yaml is your local runtime config (gitignored) where secrets/tokens live.
 # Update:
 server_url: "https://yourdomain.com/victoriametrics"
 api_url: "https://yourdomain.com/api/v1"
 
-# 6. Register device (first run)
+# 6. Register device (first run, only if token-based self-enrollment is enabled)
 sudo /opt/health-monitor/agent/venv/bin/python main.py
-# Device token will be auto-generated and saved
+# Device token will be auto-generated and saved (in config.local.yaml)
 
 # 7. Install systemd service
 sudo cp health-monitor-agent.service /etc/systemd/system/
@@ -442,7 +562,7 @@ sudo netstat -tlnp | grep 8001
 
 ```bash
 # Check config
-cat /opt/health-monitor/agent/config.yaml
+cat /opt/health-monitor/agent/config.local.yaml
 
 # Test connectivity
 curl https://yourdomain.com/api/v1/health
@@ -465,6 +585,46 @@ sudo docker-compose restart grafana
 ```
 
 If Grafana is restarting in a loop, check provisioning errors (common causes: invalid YAML, missing alert rule `folder` in provisioned rule groups, or missing required environment variables like `ALERT_WEBHOOK_TOKEN`).
+
+## 🪟 Windows Deployment Notes (Single Host)
+
+For an internal-only single-machine setup on Windows:
+
+1. Install Docker Desktop and enable Docker Compose.
+2. From the repo root, set required environment variables and start Docker:
+   - `POSTGRES_PASSWORD`, `GRAFANA_ADMIN_PASSWORD`, `ALERT_WEBHOOK_TOKEN`
+3. Run the FastAPI server from `server/venv` (or as a Windows service).
+4. Run the GUI:
+   - dev: `npm run dev` (local)
+   - production: build `gui/dist` and serve it with IIS/Nginx/another internal web server.
+
+For Windows agents, use NSSM to run `agent\.venv\Scripts\python.exe agent\main.py` and store credentials in `agent/config.local.yaml`.
+
+Example (PowerShell as Administrator, adjust paths):
+
+```powershell
+# Security note: only run binaries you trust. Verify the NSSM download is authentic before using it.
+# If PowerShell blocks running scripts in your environment, you may need:
+# Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+# (RemoteSigned allows local scripts; downloaded scripts must be signed. You can also just run these commands manually.)
+
+# Create agent venv + install deps
+$INSTALL_PATH = "C:\health-monitor"  # adjust
+Set-Location "$INSTALL_PATH\agent"
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+
+# Install service via NSSM (download from the official NSSM site and extract it somewhere on disk)
+$NSSM_PATH = "C:\Tools\nssm\nssm.exe"  # adjust
+& $NSSM_PATH install health-monitor-agent "$INSTALL_PATH\agent\.venv\Scripts\python.exe" "$INSTALL_PATH\agent\main.py"
+& $NSSM_PATH set health-monitor-agent AppDirectory "$INSTALL_PATH\agent"
+
+# Start
+Start-Service -Name health-monitor-agent
+
+# Verify
+Get-Service -Name health-monitor-agent
+```
 
 ---
 
