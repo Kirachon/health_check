@@ -1,7 +1,12 @@
 api_url: http://localhost:8001
 collection_interval: 30
-device_id: 0ebca04a-86f9-4619-a9bf-8bb39a76f9e0
-device_token: dev_PGxcpmygsD6gF3kgtUMxhYQasbSZXkhP7AB9pm177bc
+
+# NOTE: Do not commit device credentials to git.
+# On first run, the agent will register and store credentials in `config.local.yaml`.
+device_id: ''
+device_token: ''
+# Optional: required if the server enforces registration token
+registration_token: ''
 hostname: ''
 ip: ''
 log_level: INFO

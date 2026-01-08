@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+import ipaddress
+from pydantic import BaseModel, field_validator
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from typing import List, Optional
@@ -8,7 +9,7 @@ import secrets
 
 from db.models import get_db, Device, User
 from api.auth import get_current_user
-from services.auth_service import get_password_hash
+from services.auth_service import get_password_hash, verify_password
 from config import settings
 
 
@@ -20,6 +21,23 @@ class DeviceRegister(BaseModel):
     hostname: str
     ip: str
     os: Optional[str] = None
+
+    @field_validator("hostname")
+    @classmethod
+    def _validate_hostname(cls, v: str) -> str:
+        v = (v or "").strip()
+        if not v:
+            raise ValueError("hostname is required")
+        if len(v) > 255:
+            raise ValueError("hostname too long")
+        return v
+
+    @field_validator("ip")
+    @classmethod
+    def _validate_ip(cls, v: str) -> str:
+        v = (v or "").strip()
+        ipaddress.ip_address(v)
+        return v
 
 
 class DeviceToken(BaseModel):
@@ -85,8 +103,21 @@ def to_device_response(device: Device) -> DeviceResponse:
 
 # Endpoints
 @router.post("/register", response_model=DeviceToken, status_code=status.HTTP_201_CREATED)
-def register_device(device_data: DeviceRegister, db: Session = Depends(get_db)):
+def register_device(
+    device_data: DeviceRegister,
+    db: Session = Depends(get_db),
+    x_registration_token: Optional[str] = Header(default=None, alias="X-Registration-Token"),
+):
     """Register a new device and return authentication token"""
+    if settings.DEVICE_REGISTRATION_REQUIRE_TOKEN:
+        expected = (settings.DEVICE_REGISTRATION_TOKEN or "").strip()
+        provided = (x_registration_token or "").strip()
+        if len(expected) < 32 or len(provided) < 32 or not secrets.compare_digest(provided, expected):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Device registration is disabled or requires a valid registration token",
+            )
+
     # Generate device token
     token = f"dev_{secrets.token_urlsafe(32)}"
     token_hash = get_password_hash(token)
@@ -171,13 +202,20 @@ def delete_device(
 @router.post("/{device_id}/heartbeat", status_code=status.HTTP_204_NO_CONTENT)
 def update_heartbeat(
     device_id: UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    x_device_token: Optional[str] = Header(default=None, alias="X-Device-Token"),
 ):
     """Update device last_seen timestamp (called by agents)"""
     device = db.query(Device).filter(Device.id == device_id).first()
     
     if not device:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+
+    if settings.DEVICE_HEARTBEAT_REQUIRE_TOKEN:
+        provided = (x_device_token or "").strip()
+        token_valid = bool(provided) and verify_password(provided, device.token_hash)
+        if not token_valid:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid device token")
     
     device.last_seen = datetime.utcnow()
     device.status = "online"

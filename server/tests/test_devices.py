@@ -1,7 +1,10 @@
+from config import settings
+
 def test_register_device(client):
     """Test device registration"""
     response = client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={
             "hostname": "test-server",
             "ip": "192.168.1.100",
@@ -21,6 +24,7 @@ def test_list_devices(authenticated_client):
     # Register a device first
     device_response = authenticated_client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={
             "hostname": "test-server",
             "ip": "192.168.1.100"
@@ -43,6 +47,7 @@ def test_get_device_details(authenticated_client):
     # Register device
     register_response = authenticated_client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={"hostname": "test-server", "ip": "192.168.1.100"}
     )
     device_id = register_response.json()["device_id"]
@@ -62,6 +67,7 @@ def test_delete_device(authenticated_client):
     # Register device
     register_response = authenticated_client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={"hostname": "test-server", "ip": "192.168.1.100"}
     )
     device_id = register_response.json()["device_id"]
@@ -80,10 +86,12 @@ def test_filter_devices_by_status(authenticated_client):
     # Register devices
     authenticated_client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={"hostname": "online-server", "ip": "192.168.1.101"}
     )
     authenticated_client.post(
         "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
         json={"hostname": "offline-server", "ip": "192.168.1.102"}
     )
     
@@ -95,3 +103,26 @@ def test_filter_devices_by_status(authenticated_client):
     assert data["total"] >= 2
     for device in data["devices"]:
         assert device["status"] == "offline"
+
+
+def test_device_heartbeat_requires_token(client):
+    """Heartbeat must require the correct device token."""
+    register_response = client.post(
+        "/api/v1/devices/register",
+        headers={"X-Registration-Token": settings.DEVICE_REGISTRATION_TOKEN},
+        json={"hostname": "hb-server", "ip": "192.168.1.200"},
+    )
+    assert register_response.status_code == 201
+    payload = register_response.json()
+    device_id = payload["device_id"]
+    device_token = payload["token"]
+
+    # Missing token should be rejected
+    bad = client.post(f"/api/v1/devices/{device_id}/heartbeat")
+    assert bad.status_code == 401
+
+    ok = client.post(
+        f"/api/v1/devices/{device_id}/heartbeat",
+        headers={"X-Device-Token": device_token},
+    )
+    assert ok.status_code == 204

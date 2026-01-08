@@ -22,7 +22,13 @@ pip install -r requirements.txt
 
 ### 2. Configure Agent
 
-Edit `config.yaml`:
+Copy the template `config.yaml` to a local config file (do not commit credentials):
+
+```bash
+cp config.yaml config.local.yaml
+```
+
+Edit `config.local.yaml`:
 
 ```yaml
 server_url: "http://your-vm:9090"
@@ -38,7 +44,9 @@ Run once to register and get credentials:
 python main.py
 ```
 
-The agent will auto-register and save credentials to `config.yaml`.
+The agent will auto-register and save credentials to `config.local.yaml`.
+
+If the server enforces registration tokens, set `registration_token` in `config.local.yaml`.
 
 ### 4. Run as Service
 
@@ -49,12 +57,7 @@ sudo systemctl enable health-monitor-agent
 sudo systemctl start health-monitor-agent
 ```
 
-**Windows:**
-```bash
-# Run as administrator
-python main.py install
-python main.py start
-```
+**Windows (NSSM):** use NSSM to run `agent/.venv/Scripts/python.exe agent/main.py` and point it at your `config.local.yaml`.
 
 ## Configuration
 
@@ -65,6 +68,7 @@ python main.py start
 | `collection_interval` | Seconds between collections | `30` |
 | `retry_attempts` | Max retry attempts | `3` |
 | `retry_delay` | Seconds between retries | `5` |
+| `registration_token` | Optional device registration token | `""` |
 
 ## Metrics Collected
 

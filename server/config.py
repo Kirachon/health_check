@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # Application
     APP_NAME: str = "Health Monitor API"
-    DEBUG: bool = True
+    DEBUG: bool = False
     API_V1_PREFIX: str = "/api/v1"
 
     # Database
@@ -41,6 +41,11 @@ class Settings(BaseSettings):
     ALERT_WEBHOOK_TOKEN: str = ""
     ALERT_EVENT_RETENTION_DAYS: int = 30
 
+    # Device registration / heartbeat security
+    DEVICE_REGISTRATION_REQUIRE_TOKEN: bool = True
+    DEVICE_REGISTRATION_TOKEN: str = ""
+    DEVICE_HEARTBEAT_REQUIRE_TOKEN: bool = True
+
     # Device status
     # If a device hasn't heartbeated within this window, treat it as offline.
     DEVICE_OFFLINE_THRESHOLD_SECONDS: int = 90
@@ -66,6 +71,10 @@ class Settings(BaseSettings):
 
     @field_validator("ALERT_WEBHOOK_TOKEN")
     def _strip_webhook_token(cls, v: str):
+        return (v or "").strip()
+
+    @field_validator("DEVICE_REGISTRATION_TOKEN")
+    def _strip_device_registration_token(cls, v: str):
         return (v or "").strip()
 
     @model_validator(mode="after")

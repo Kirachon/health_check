@@ -1,10 +1,12 @@
 import pytest
+import secrets
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from db.models import Base, get_db, User
 from main import app
 from services.auth_service import get_password_hash
+from config import settings
 
 # Test database (SQLite in-memory)
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -29,6 +31,11 @@ def client():
     """Create test client with fresh database"""
     Base.metadata.create_all(bind=engine)
 
+    # Security knobs for tests
+    settings.DEVICE_REGISTRATION_REQUIRE_TOKEN = True
+    settings.DEVICE_REGISTRATION_TOKEN = secrets.token_hex(32)
+    settings.DEVICE_HEARTBEAT_REQUIRE_TOKEN = True
+
     # Seed default admin user for auth tests
     db = TestingSessionLocal()
     try:
@@ -41,6 +48,16 @@ def client():
 
     yield TestClient(app)
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(scope="function")
+def db():
+    """Direct DB session fixture for tests that need DB access."""
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @pytest.fixture(scope="function")

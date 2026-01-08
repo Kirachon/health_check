@@ -25,7 +25,16 @@ def signal_handler(signum, frame):
 
 
 def _default_config_path() -> Path:
-    """Return the default config path next to this script."""
+    """Return the default *local* config path next to this script.
+
+    We keep `config.yaml` as a committed template and store per-machine credentials
+    (device_id/device_token) in `config.local.yaml`, which must not be committed.
+    """
+    return Path(__file__).resolve().parent / "config.local.yaml"
+
+
+def _template_config_path() -> Path:
+    """Return the committed template config path next to this script."""
     return Path(__file__).resolve().parent / "config.yaml"
 
 
@@ -43,7 +52,7 @@ def load_config(config_path: Optional[Union[str, Path]] = None) -> Dict:
         sys.exit(1)
 
 
-def register_device(config: Dict, device_info: Dict, config_path: Path) -> Dict:
+def register_device(config: Dict, device_info: Dict, write_path: Path) -> Dict:
     """Register device with the server if not already registered"""
     # Check if already registered
     if config.get("device_id") and config.get("device_token"):
@@ -53,10 +62,16 @@ def register_device(config: Dict, device_info: Dict, config_path: Path) -> Dict:
     # Register new device
     server_api = get_api_v1_url(config)
     try:
+        headers = {}
+        registration_token = (config.get("registration_token") or "").strip()
+        if registration_token:
+            headers["X-Registration-Token"] = registration_token
+
         response = requests.post(
             f"{server_api}/devices/register",
             json=device_info,
-            timeout=10
+            headers=headers or None,
+            timeout=10,
         )
         response.raise_for_status()
         
@@ -66,11 +81,12 @@ def register_device(config: Dict, device_info: Dict, config_path: Path) -> Dict:
         
         logging.info(f"Device registered successfully. ID: {device_id}")
         
-        # Update config file with credentials
+        # Update local config file with credentials (never write back to template)
         config["device_id"] = device_id
         config["device_token"] = device_token
         
-        with open(config_path, "w") as f:
+        write_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(write_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False)
         
         return config
@@ -88,9 +104,15 @@ def send_heartbeat(config: Dict):
     
     server_api = get_api_v1_url(config)
     try:
+        headers = {}
+        device_token = (config.get("device_token") or "").strip()
+        if device_token:
+            headers["X-Device-Token"] = device_token
+
         response = requests.post(
             f"{server_api}/devices/{config['device_id']}/heartbeat",
-            timeout=5
+            headers=headers or None,
+            timeout=5,
         )
         response.raise_for_status()
     except requests.RequestException as e:
@@ -137,8 +159,26 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Load configuration
-    config_path = _default_config_path()
-    config = load_config(config_path)
+    local_config_path = _default_config_path()
+    template_config_path = _template_config_path()
+
+    config_source = local_config_path if local_config_path.exists() else template_config_path
+    config = load_config(config_source)
+
+    # If credentials exist in the template config, migrate them to config.local.yaml
+    if config_source == template_config_path and (config.get("device_id") or config.get("device_token")):
+        try:
+            local_config_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(local_config_path, "w") as f:
+                yaml.dump(config, f, default_flow_style=False)
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "Found device credentials in agent/config.yaml; migrated to agent/config.local.yaml. "
+                "Keep config.yaml as a template and do not commit config.local.yaml."
+            )
+        except Exception:
+            # Best effort; continue using the template config for this run.
+            pass
     
     # Setup logging
     logging.basicConfig(
@@ -161,8 +201,8 @@ def main():
     
     logger.info(f"Device: {device_info['hostname']} ({device_info['ip']})")
     
-    # Register device (if needed)
-    config = register_device(config, device_info, config_path)
+    # Register device (if needed). Always store credentials in config.local.yaml.
+    config = register_device(config, device_info, local_config_path)
     
     # Initialize sender
     sender = MetricsSender(config, device_info)

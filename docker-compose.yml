@@ -6,7 +6,7 @@ services:
     image: victoriametrics/victoria-metrics:latest
     container_name: health_monitor_vm
     ports:
-      - "9090:8428"
+      - "127.0.0.1:9090:8428"
     volumes:
       - victoriametrics-data:/victoria-metrics-data
     command:
@@ -24,9 +24,10 @@ services:
     environment:
       POSTGRES_DB: health_monitor
       POSTGRES_USER: monitor_user
-      POSTGRES_PASSWORD: monitor_pass # Change in production
+      # Required: set in your environment or a root `.env` file (never commit it)
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}"
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -44,12 +45,14 @@ services:
     image: grafana/grafana:latest
     container_name: health_monitor_grafana
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin # Change in production
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      # Required: set in your environment or a root `.env` file (never commit it)
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD}"
       GF_INSTALL_PLUGINS: ""
-      ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN}"
+      # Required if alert webhook ingestion enforces tokens (recommended)
+      ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN:?Set ALERT_WEBHOOK_TOKEN}"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./config/grafana/provisioning:/etc/grafana/provisioning
@@ -64,7 +67,7 @@ services:
     image: prom/alertmanager:latest
     container_name: health_monitor_alertmanager
     ports:
-      - "9094:9093"
+      - "127.0.0.1:9094:9093"
     volumes:
       - ./config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
       - alertmanager-data:/alertmanager
@@ -81,7 +84,7 @@ services:
   #   ports:
   #     - "8000:8000"
   #   environment:
-  #     DATABASE_URL: postgresql://monitor_user:monitor_pass@postgres:5432/health_monitor
+  #     DATABASE_URL: postgresql://monitor_user:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@postgres:5432/health_monitor
   #     VICTORIA_METRICS_URL: http://victoriametrics:8428
   #     ALERT_WEBHOOK_REQUIRE_TOKEN: "true"
   #     ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN}"

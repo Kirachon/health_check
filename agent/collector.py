@@ -23,14 +23,28 @@ class MetricsCollector:
     
     def get_device_info(self) -> Dict[str, str]:
         """Get device identification information"""
+        ip = "127.0.0.1"
         try:
-            # Try to get primary IP address
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
+            # Prefer a local interface address (internal-only; no external connectivity required).
+            found = False
+            for _ifname, addrs in psutil.net_if_addrs().items():
+                for addr in addrs:
+                    if getattr(addr, "family", None) != socket.AF_INET:
+                        continue
+                    candidate = (addr.address or "").strip()
+                    if not candidate or candidate.startswith("127."):
+                        continue
+                    # Skip link-local
+                    if candidate.startswith("169.254."):
+                        continue
+                    ip = candidate
+                    found = True
+                    break
+                if found:
+                    break
         except Exception:
-            ip = "127.0.0.1"
+            # Keep loopback fallback
+            pass
         
         return {
             "hostname": self.hostname,

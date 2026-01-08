@@ -24,6 +24,7 @@ venv/
 env/
 ENV/
 agent/.venv/
+agent/config.local.yaml
 
 # Testing
 .pytest_cache/

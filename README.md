@@ -17,6 +17,12 @@
 
 ### 1. Start Infrastructure (Docker)
 
+Create a root `.env` file (do not commit it) or export these environment variables:
+
+- `POSTGRES_PASSWORD`
+- `GRAFANA_ADMIN_PASSWORD`
+- `ALERT_WEBHOOK_TOKEN`
+
 ```bash
 # Start all services (new CLI)
 docker compose up -d
@@ -30,20 +36,26 @@ docker compose logs -f
 
 **Services:**
 - VictoriaMetrics: http://localhost:9090
-- Grafana: http://localhost:3001 (admin/admin)
+- Grafana: http://localhost:3001 (`admin` / `$GRAFANA_ADMIN_PASSWORD`)
 - Alertmanager: http://localhost:9094
 - PostgreSQL: localhost:5433
 
-Before starting in a shared environment, set the webhook token (used by Grafana → API alert ingestion):
+By default these ports are bound to `127.0.0.1` for safety (not exposed to the LAN). To expose to a server/department network, edit the `ports:` mappings in `docker-compose.yml`.
+
+Before starting, set the required tokens/passwords:
 
 Windows PowerShell:
 ```powershell
+$env:POSTGRES_PASSWORD = "<STRONG_PASSWORD>"
+$env:GRAFANA_ADMIN_PASSWORD = "<STRONG_PASSWORD>"
 $env:ALERT_WEBHOOK_TOKEN = -join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
 docker compose up -d
 ```
 
 Linux/macOS:
 ```bash
+export POSTGRES_PASSWORD="<STRONG_PASSWORD>"
+export GRAFANA_ADMIN_PASSWORD="<STRONG_PASSWORD>"
 export ALERT_WEBHOOK_TOKEN="$(openssl rand -hex 32)"
 docker compose up -d
 ```
@@ -67,7 +79,7 @@ docker exec health_monitor_db psql -U monitor_user -d health_monitor -c "SELECT 
 ### 3. Access Grafana
 
 1. Navigate to http://localhost:3001
-2. Login with `admin` / `admin`
+2. Login with `admin` / `$GRAFANA_ADMIN_PASSWORD`
 3. VictoriaMetrics datasource is pre-configured
 
 ### 4. Run Backend API
@@ -78,6 +90,9 @@ cp .env.example .env
 python main.py
 # Backend API: http://localhost:8001
 ```
+
+For internal deployments, also set `DEVICE_REGISTRATION_TOKEN` in `server/.env` so only authorized agents can register.
+
 Create an admin user before logging in:
 
 Note: run these commands from the **repository root** (the same folder as `docker-compose.yml`).
@@ -118,10 +133,11 @@ npm run dev
 To add another machine, install the agent on that machine and point it at your internal API + VictoriaMetrics:
 
 1. Copy `agent/` to the target machine.
-2. Edit `agent/config.yaml`:
+2. Copy `agent/config.yaml` → `agent/config.local.yaml` and edit `agent/config.local.yaml`:
    - `api_url: http://<YOUR-INTERNAL-API>:8001`
    - `server_url: http://<YOUR-VICTORIAMETRICS>:9090`
-3. Run `agent/main.py` once (it registers and stores a device token).
+   - If enabled on the server, set `registration_token: <YOUR_DEVICE_REGISTRATION_TOKEN>`
+3. Run `agent/main.py` once (it registers and stores a device token in `config.local.yaml`).
 4. Install as a service (systemd on Linux, NSSM on Windows).
 
 ## Key Features
