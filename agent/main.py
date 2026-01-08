@@ -93,7 +93,11 @@ def register_device(config: Dict, device_info: Dict, write_path: Path) -> Dict:
         
     except requests.RequestException as e:
         logging.error(f"Failed to register device: {e}")
-        logging.warning("Continuing without registration. Metrics may not be accepted.")
+        logging.warning(
+            "Registration was rejected. If the server uses admin-only enrollment "
+            "(DEVICE_REGISTRATION_MODE=admin), ask an admin to enroll this device and "
+            "provide device_id/device_token for config.local.yaml."
+        )
         return config
 
 

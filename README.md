@@ -91,7 +91,9 @@ python main.py
 # Backend API: http://localhost:8001
 ```
 
-For internal deployments, also set `DEVICE_REGISTRATION_TOKEN` in `server/.env` so only authorized agents can register.
+For internal deployments, we recommend **admin-only enrollment**:
+- Default: `DEVICE_REGISTRATION_MODE=admin` (agents cannot self-register; an admin must create the device in the UI/API, then securely provide `device_id` and `device_token` to the agent).
+- Optional (labs only): set `DEVICE_REGISTRATION_MODE=token` and configure `DEVICE_REGISTRATION_TOKEN` to allow self-registration.
 
 Create an admin user before logging in:
 

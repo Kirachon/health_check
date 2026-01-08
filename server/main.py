@@ -18,7 +18,7 @@ if settings.SECRET_KEY == "your-secret-key-change-in-production-minimum-32-chara
     logger.warning("SECRET_KEY is still the default placeholder. Set SECRET_KEY in server/.env before production use.")
 if settings.ALERT_WEBHOOK_REQUIRE_TOKEN and not settings.ALERT_WEBHOOK_TOKEN:
     logger.warning("ALERT_WEBHOOK_TOKEN is empty. Webhook ingestion will reject requests until it is set.")
-if settings.DEVICE_REGISTRATION_REQUIRE_TOKEN and not settings.DEVICE_REGISTRATION_TOKEN:
+if settings.DEVICE_REGISTRATION_MODE == "token" and settings.DEVICE_REGISTRATION_REQUIRE_TOKEN and not settings.DEVICE_REGISTRATION_TOKEN:
     logger.warning(
         "DEVICE_REGISTRATION_TOKEN is empty. Device registration will be rejected until it is set "
         "(or set DEVICE_REGISTRATION_REQUIRE_TOKEN=false for local dev)."

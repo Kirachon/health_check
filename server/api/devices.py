@@ -8,7 +8,7 @@ from typing import List, Optional
 import secrets
 
 from db.models import get_db, Device, User
-from api.auth import get_current_user
+from api.auth import get_current_user, get_current_user_optional
 from services.auth_service import get_password_hash, verify_password
 from config import settings
 
@@ -107,16 +107,20 @@ def register_device(
     device_data: DeviceRegister,
     db: Session = Depends(get_db),
     x_registration_token: Optional[str] = Header(default=None, alias="X-Registration-Token"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """Register a new device and return authentication token"""
-    if settings.DEVICE_REGISTRATION_REQUIRE_TOKEN:
-        expected = (settings.DEVICE_REGISTRATION_TOKEN or "").strip()
-        provided = (x_registration_token or "").strip()
-        if len(expected) < 32 or len(provided) < 32 or not secrets.compare_digest(provided, expected):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Device registration is disabled or requires a valid registration token",
-            )
+    if settings.DEVICE_REGISTRATION_MODE == "admin":
+        if not current_user or current_user.role != "admin":
+            # Do not reveal enrollment mode details
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Device registration not authorized")
+    else:
+        # Token-based self-enrollment (opt-in)
+        if settings.DEVICE_REGISTRATION_REQUIRE_TOKEN:
+            expected = (settings.DEVICE_REGISTRATION_TOKEN or "").strip()
+            provided = (x_registration_token or "").strip()
+            if len(expected) < 32 or len(provided) < 32 or not secrets.compare_digest(provided, expected):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Device registration not authorized")
 
     # Generate device token
     token = f"dev_{secrets.token_urlsafe(32)}"

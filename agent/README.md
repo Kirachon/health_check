@@ -38,7 +38,7 @@ collection_interval: 30
 
 ### 3. Register Device
 
-Run once to register and get credentials:
+Run once to register and get credentials (only if the server allows token-based self-enrollment):
 
 ```bash
 python main.py
@@ -47,6 +47,10 @@ python main.py
 The agent will auto-register and save credentials to `config.local.yaml`.
 
 If the server enforces registration tokens, set `registration_token` in `config.local.yaml`.
+
+**Admin-only enrollment (recommended default):** If the server is configured with `DEVICE_REGISTRATION_MODE=admin`,
+the agent cannot self-register. In that mode, an admin must enroll the device and securely provide `device_id` and
+`device_token`, which you then paste into `config.local.yaml`.
 
 ### 4. Run as Service
 

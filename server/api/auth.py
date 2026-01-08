@@ -18,6 +18,7 @@ from config import settings
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
 # Request/Response Models
@@ -134,3 +135,27 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
     return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Like get_current_user, but returns None when no/invalid credentials are provided."""
+    if credentials is None:
+        return None
+
+    token = credentials.credentials
+    payload = verify_token(token, token_type="access")
+    if not payload:
+        return None
+
+    user_id = payload.get("sub")
+    if not user_id:
+        return None
+    try:
+        parsed = UUID(user_id)
+    except (ValueError, TypeError):
+        return None
+
+    return db.query(User).filter(User.id == parsed).first()

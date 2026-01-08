@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     ALERT_EVENT_RETENTION_DAYS: int = 30
 
     # Device registration / heartbeat security
+    # Enrollment mode:
+    # - "admin": only an authenticated admin can create/register devices (recommended default)
+    # - "token": devices can self-register using X-Registration-Token (opt-in for labs)
+    DEVICE_REGISTRATION_MODE: str = "admin"
     DEVICE_REGISTRATION_REQUIRE_TOKEN: bool = True
     DEVICE_REGISTRATION_TOKEN: str = ""
     DEVICE_HEARTBEAT_REQUIRE_TOKEN: bool = True
@@ -76,6 +80,13 @@ class Settings(BaseSettings):
     @field_validator("DEVICE_REGISTRATION_TOKEN")
     def _strip_device_registration_token(cls, v: str):
         return (v or "").strip()
+
+    @field_validator("DEVICE_REGISTRATION_MODE")
+    def _validate_device_registration_mode(cls, v: str):
+        mode = (v or "").strip().lower()
+        if mode not in {"admin", "token"}:
+            raise ValueError("DEVICE_REGISTRATION_MODE must be 'admin' or 'token'")
+        return mode
 
     @model_validator(mode="after")
     def _validate_webhook_config(self):

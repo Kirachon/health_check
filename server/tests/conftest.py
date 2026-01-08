@@ -32,6 +32,7 @@ def client():
     Base.metadata.create_all(bind=engine)
 
     # Security knobs for tests
+    settings.DEVICE_REGISTRATION_MODE = "token"
     settings.DEVICE_REGISTRATION_REQUIRE_TOKEN = True
     settings.DEVICE_REGISTRATION_TOKEN = secrets.token_hex(32)
     settings.DEVICE_HEARTBEAT_REQUIRE_TOKEN = True
