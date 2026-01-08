@@ -76,6 +76,8 @@ config/secrets/
 *.err
 *.pid
 *.tmp
+tools/
+config/postgres/migrations/
 
 # Local one-off scripts (do not ship)
 server/reset_admin_password.py

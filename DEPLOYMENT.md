@@ -173,6 +173,10 @@ sudo systemctl status health-monitor-api
 sudo systemctl status health-monitor-agent
 ```
 
+Windows note:
+- If you need Windows services, use NSSM from the official distribution and point it at the agent/service executables.
+- NSSM binaries are not shipped in this repository.
+
 ### Step 8: Configure Nginx
 
 ```bash
