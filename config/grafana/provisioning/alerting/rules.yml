@@ -2,6 +2,7 @@ apiVersion: 1
 
 groups:
   - name: device_health_alerts
+    folder: Health Monitor
     interval: 1m
     rules:
       # Critical: CPU usage over 90% for 5 minutes

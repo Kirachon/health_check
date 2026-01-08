@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     # Security
     BCRYPT_ROUNDS: int = 12
 
+    # Alerting webhook
+    ALERT_WEBHOOK_REQUIRE_TOKEN: bool = True
+    ALERT_WEBHOOK_TOKEN: str = ""
+    ALERT_EVENT_RETENTION_DAYS: int = 30
+
     # Device status
     # If a device hasn't heartbeated within this window, treat it as offline.
     DEVICE_OFFLINE_THRESHOLD_SECONDS: int = 90

@@ -92,14 +92,17 @@ Create a backend API for user management with role-based access control (RBAC). 
 
 **Choose a path before implementing User CRUD:**
 
-**Option A (recommended / highest compatibility):** implement User CRUD on existing columns only.
-- Manage: `username`, `role`, password reset (update `password_hash`).
-- Skip: `email`, `status`, `last_login` for now.
-
-**Option B (more Zabbix-like):** extend the User model.
-- Add columns: `email`, `status` (`active|suspended`), `last_login`.
-- Add Python deps if you use `EmailStr`: `email-validator` (not currently listed in `server/requirements.txt`).
-- Update Docker init + test fixtures (`config/postgres/init.sql`, `server/tests/conftest.py`).
+> [!IMPORTANT]
+> **DECISION: Use Option A (existing columns only)**
+> 
+> The `User` model already has: `id`, `username`, `password_hash`, `role`, `created_at`, `updated_at`.
+> Implement CRUD on these columns. Skip `email`, `status`, `last_login` for v1.
+> 
+> **Why Option A?**
+> - No schema migrations needed (no Alembic in repo)
+> - SQLite test compatibility maintained
+> - Delivers core functionality immediately
+> - Future-proof: Option B features can be added later as enhancement
 
 ### 1.2 Create Users API
 **File**: `server/api/users.py` (NEW)
@@ -331,26 +334,26 @@ Replace mock data with live API calls following the established pattern.
 Add to `APIClient` class:
 ```typescript
 // ============ USERS API ============
-async listUsers(params?: { search?: string; role?: string; status?: string; limit?: number; offset?: number }) {
+async listUsers(params?: { search?: string; role?: string; limit?: number; offset?: number }) {
     return this.authRequest<{
         users: Array<{
             id: string;
             username: string;
-            email: string;
             role: 'admin' | 'sre' | 'viewer';
-            status: 'active' | 'suspended';
             created_at: string;
-            last_login: string | null;
+            updated_at: string;
         }>;
         total: number;
+        limit: number;
+        offset: number;
     }>('get', '/users', { params });
 }
 
-async createUser(data: { username: string; email: string; password: string; role?: string }) {
+async createUser(data: { username: string; password: string; role?: string }) {
     return this.authRequest<UserResponse>('post', '/users', { data });
 }
 
-async updateUser(id: string, data: { email?: string; role?: string; status?: string }) {
+async updateUser(id: string, data: { role?: string }) {
     return this.authRequest<UserResponse>('put', `/users/${id}`, { data });
 }
 
@@ -358,8 +361,8 @@ async deleteUser(id: string) {
     return this.authRequest<void>('delete', `/users/${id}`);
 }
 
-async toggleUserSuspend(id: string) {
-    return this.authRequest<UserResponse>('post', `/users/${id}/suspend`);
+async resetUserPassword(id: string, password: string) {
+    return this.authRequest<void>('post', `/users/${id}/reset-password`, { data: { password } });
 }
 ```
 
@@ -436,6 +439,18 @@ class ActionExecution(Base):
 # alert_events = relationship("AlertEvent", back_populates="trigger", cascade="all, delete-orphan")
 ```
 
+> [!IMPORTANT]
+> **Required Model Update: Add relationship to Trigger**
+> 
+> In `server/db/models.py`, class `Trigger` (around line 183), after the existing relationship:
+> ```python
+> # Existing:
+> template = relationship("Template", back_populates="triggers")
+> 
+> # ADD THIS LINE:
+> alert_events = relationship("AlertEvent", back_populates="trigger", cascade="all, delete-orphan")
+> ```
+
 ### 3.2 Trigger Evaluator Service
 **File**: `server/services/alerting.py` (NEW)
 
@@ -480,9 +495,30 @@ class TriggerEvaluator:
         # Query VictoriaMetrics
         value = await self.query_vm(trigger.expression)
         
-        # Determine state (simplified: non-None means PROBLEM)
-        # Real implementation should parse expression for threshold
-        new_state = "PROBLEM" if value is not None and value > 0 else "OK"
+        # Parse threshold from expression (supports: >, <, >=, <=, ==)
+        new_state = "OK"
+        if value is not None:
+            import re
+            # Extract comparison operator and threshold from expression
+            # Examples: "cpu_percent > 90", "memory_usage >= 80", "disk_free < 10"
+            match = re.search(r'([><=]+)\s*([\d.]+)\s*$', trigger.expression)
+            if match:
+                op, threshold = match.group(1), float(match.group(2))
+                if op == '>' and value > threshold:
+                    new_state = "PROBLEM"
+                elif op == '>=' and value >= threshold:
+                    new_state = "PROBLEM"
+                elif op == '<' and value < threshold:
+                    new_state = "PROBLEM"
+                elif op == '<=' and value <= threshold:
+                    new_state = "PROBLEM"
+                elif op == '==' and value == threshold:
+                    new_state = "PROBLEM"
+            else:
+                # Fallback: any non-zero value is PROBLEM
+                logger.warning(f"Could not parse threshold from expression: {trigger.expression}")
+                new_state = "PROBLEM" if value > 0 else "OK"
+        
         old_state = self.trigger_states.get(str(trigger.id), "OK")
         
         # State changed?
@@ -689,13 +725,40 @@ def start_alerting_worker():
 **File**: `server/main.py`
 
 ```python
-from workers.alerting_worker import start_alerting_worker
+from contextlib import asynccontextmanager
+import asyncio
+import logging
 
-@app.on_event("startup")
-async def startup_event():
-    """Start background workers."""
-    start_alerting_worker()
+# Import at top of file
+from workers.alerting_worker import alerting_loop
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan with background workers."""
+    logger = logging.getLogger(__name__)
+    logger.info("Starting background alerting worker...")
+    
+    # Start alerting worker as background task
+    task = asyncio.create_task(alerting_loop())
+    
+    yield  # Application runs here
+    
+    # Shutdown: cancel worker
+    logger.info("Shutting down alerting worker...")
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
+
+# Update FastAPI app initialization
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    lifespan=lifespan  # Add lifespan parameter
+)
 ```
+
+**Note**: Update `server/workers/alerting_worker.py` to remove the `start_alerting_worker()` function - use `alerting_loop()` directly.
 
 ### 3.6 Alert Events API
 **File**: `server/api/alerts.py` (NEW)
@@ -782,29 +845,30 @@ def get_agent_config(
     device_id: UUID,
     db: Session = Depends(get_db)
 ):
-    """Get agent configuration based on linked templates."""
+    """Get agent configuration based on linked templates.
+    
+    Uses existing template_hostgroup association table from models.py.
+    """
     device = db.query(Device).filter(Device.id == device_id).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
-    # Get templates via host groups
+    # Get templates via host groups using existing relationship
+    # The template_hostgroup association table already exists in models.py (lines 110-115)
     items = []
     seen_keys = set()
     
     for host_group in device.host_groups:
-        # Would need template-hostgroup relationship
-        # For now, get all templates
-        templates = db.query(Template).all()
-        
-        for template in templates:
+        # Access templates via the pre-configured relationship
+        for template in host_group.templates:
             for item in template.items:
-                if item.item_key not in seen_keys:
-                    seen_keys.add(item.item_key)
+                if item.key not in seen_keys:
+                    seen_keys.add(item.key)
                     items.append({
-                        "key": item.item_key,
-                        "type": item.item_type,
-                        "interval": item.interval or 60,
-                        "parameters": item.parameters or {}
+                        "key": item.key,
+                        "type": item.value_type,
+                        "interval": item.update_interval,
+                        "parameters": {}
                     })
     
     return {
@@ -1128,6 +1192,109 @@ if __name__ == "__main__":
 - [ ] Dynamic collector uses fetched items
 - [ ] LLD discovers filesystems and interfaces
 - [ ] Agent tests pass
+
+---
+
+## Integration Test Examples
+
+### Test File: `server/tests/test_alerting.py` (NEW)
+
+```python
+"""Integration tests for alerting engine."""
+import pytest
+from unittest.mock import AsyncMock, patch, MagicMock
+from sqlalchemy.orm import Session
+from services.alerting import TriggerEvaluator
+from db.models import Trigger, AlertEvent
+
+class TestTriggerEvaluator:
+    @pytest.mark.asyncio
+    async def test_query_vm_returns_value(self):
+        """Test VictoriaMetrics query parsing."""
+        evaluator = TriggerEvaluator("http://localhost:8428")
+        
+        with patch('httpx.AsyncClient') as mock_client:
+            mock_response = MagicMock()
+            mock_response.json.return_value = {
+                "status": "success",
+                "data": {"result": [{"value": [1234567890, "42.5"]}]}
+            }
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            
+            value = await evaluator.query_vm("test_metric")
+            assert value == 42.5
+    
+    @pytest.mark.asyncio
+    async def test_evaluate_trigger_threshold_breach(self, db: Session):
+        """Test trigger state changes to PROBLEM when threshold breached."""
+        evaluator = TriggerEvaluator("http://mock:8428")
+        
+        # Create mock trigger
+        trigger = Trigger(
+            name="High CPU",
+            expression="cpu_percent > 90",
+            severity="high",
+            enabled=True
+        )
+        
+        with patch.object(evaluator, 'query_vm', new_callable=AsyncMock) as mock_query:
+            mock_query.return_value = 95.0  # Above threshold
+            
+            await evaluator.evaluate_trigger(db, trigger)
+            
+            # Verify state changed to PROBLEM
+            assert evaluator.trigger_states[str(trigger.id)] == "PROBLEM"
+            
+            # Verify AlertEvent was created
+            events = db.query(AlertEvent).filter(AlertEvent.trigger_id == trigger.id).all()
+            assert len(events) == 1
+            assert events[0].status == "PROBLEM"
+```
+
+### Test File: `server/tests/test_agent_config.py` (NEW)
+
+```python
+"""Tests for agent config endpoint."""
+from fastapi.testclient import TestClient
+from db.models import Device, HostGroup, Template, TemplateItem
+
+class TestAgentConfig:
+    def test_get_agent_config_device_not_found(self, authenticated_client: TestClient):
+        """Test 404 for unknown device."""
+        response = authenticated_client.get("/api/v1/templates/agents/00000000-0000-0000-0000-000000000000/config")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    
+    def test_get_agent_config_returns_items(self, authenticated_client: TestClient, db: Session):
+        """Test config returns template items for device's host groups."""
+        # Create test data
+        device = Device(hostname="test-agent", ip="192.168.1.100", token_hash="test-hash")
+        hostgroup = HostGroup(name="Linux Servers", description="Test group")
+        template = Template(name="OS Linux", description="Linux template")
+        item = TemplateItem(
+            template=template,
+            name="CPU Usage",
+            key="system.cpu.percent",
+            value_type="numeric",
+            update_interval=60
+        )
+        
+        hostgroup.devices.append(device)
+        hostgroup.templates.append(template)
+        db.add_all([device, hostgroup, template, item])
+        db.commit()
+        
+        # Test endpoint
+        response = authenticated_client.get(f"/api/v1/templates/agents/{device.id}/config")
+        assert response.status_code == 200
+        
+        data = response.json()
+        assert "items" in data
+        assert "device_id" in data
+        assert len(data["items"]) == 1
+        assert data["items"][0]["key"] == "system.cpu.percent"
+        assert data["items"][0]["interval"] == 60
+```
 
 ---
 

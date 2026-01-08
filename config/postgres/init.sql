@@ -63,11 +63,9 @@ CREATE INDEX idx_alerts_created_at ON alerts(created_at);
 CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 
--- Create default admin user (password: 'admin123' - CHANGE IN PRODUCTION)
--- Password hash generated with bcrypt rounds=12
-INSERT INTO users (username, password_hash, role) 
-VALUES ('admin', '$2b$12$ZCUsUsYgRkQdXqG5OH1QHOLPIqMvB.r6EobegNMnmzWADSkldbtxy', 'admin')
-ON CONFLICT (username) DO NOTHING;
+-- Admin user is created via scripts/create_admin.py
+-- Example:
+--   python scripts/create_admin.py --username admin --password "set-strong-password" --role admin
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -89,8 +87,3 @@ CREATE TRIGGER update_devices_modtime
     FOR EACH ROW
     EXECUTE FUNCTION update_modified_column();
 
--- Sample device for testing (optional)
--- INSERT INTO devices (hostname, ip, os, token_hash, status) 
--- VALUES ('test-server-01', '192.168.1.100', 'Ubuntu 22.04', 
---         '$2b$12$devicetoken_hash_placeholder', 'offline')
--- ON CONFLICT DO NOTHING;

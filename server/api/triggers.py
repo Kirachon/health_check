@@ -24,6 +24,15 @@ class TriggerCreate(BaseModel):
     description: Optional[str] = None
     template_id: Optional[UUID] = None
     enabled: Optional[bool] = True
+    
+    # Advanced Trigger Engine fields
+    expression_type: Optional[str] = "simple"  # simple, compound
+    compound_expression: Optional[str] = None  # JSON for compound conditions
+    time_window: Optional[int] = None  # seconds
+    time_function: Optional[str] = None  # avg, min, max, last
+    duration: Optional[int] = 0  # seconds before alert fires
+    recovery_expression: Optional[str] = None
+    parent_trigger_id: Optional[UUID] = None
 
 
 class TriggerUpdate(BaseModel):
@@ -32,6 +41,15 @@ class TriggerUpdate(BaseModel):
     severity: Optional[str] = None
     description: Optional[str] = None
     enabled: Optional[bool] = None
+    
+    # Advanced fields
+    expression_type: Optional[str] = None
+    compound_expression: Optional[str] = None
+    time_window: Optional[int] = None
+    time_function: Optional[str] = None
+    duration: Optional[int] = None
+    recovery_expression: Optional[str] = None
+    parent_trigger_id: Optional[UUID] = None
 
 
 class TriggerResponse(BaseModel):
@@ -43,6 +61,18 @@ class TriggerResponse(BaseModel):
     enabled: bool
     template_id: Optional[UUID]
     template_name: Optional[str] = None
+    
+    # Advanced fields
+    expression_type: str = "simple"
+    compound_expression: Optional[str] = None
+    time_window: Optional[int] = None
+    time_function: Optional[str] = None
+    duration: int = 0
+    recovery_expression: Optional[str] = None
+    parent_trigger_id: Optional[UUID] = None
+    last_state: Optional[str] = None
+    state_since: Optional[datetime] = None
+    
     created_at: datetime
     updated_at: datetime
 
@@ -66,6 +96,15 @@ def to_trigger_response(t: Trigger) -> TriggerResponse:
         enabled=t.enabled,
         template_id=t.template_id,
         template_name=t.template.name if t.template else None,
+        expression_type=t.expression_type or "simple",
+        compound_expression=t.compound_expression,
+        time_window=t.time_window,
+        time_function=t.time_function,
+        duration=t.duration or 0,
+        recovery_expression=t.recovery_expression,
+        parent_trigger_id=t.parent_trigger_id,
+        last_state=t.last_state,
+        state_since=t.state_since,
         created_at=t.created_at,
         updated_at=t.updated_at
     )
@@ -101,7 +140,15 @@ def create_trigger(
         severity=data.severity or "average",
         description=data.description,
         template_id=data.template_id,
-        enabled=data.enabled
+        enabled=data.enabled,
+        # Advanced fields
+        expression_type=data.expression_type or "simple",
+        compound_expression=data.compound_expression,
+        time_window=data.time_window,
+        time_function=data.time_function,
+        duration=data.duration or 0,
+        recovery_expression=data.recovery_expression,
+        parent_trigger_id=data.parent_trigger_id
     )
     db.add(trigger)
     db.commit()

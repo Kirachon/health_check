@@ -49,6 +49,7 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin # Change in production
       GF_INSTALL_PLUGINS: ""
+      ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN}"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./config/grafana/provisioning:/etc/grafana/provisioning
@@ -82,6 +83,8 @@ services:
   #   environment:
   #     DATABASE_URL: postgresql://monitor_user:monitor_pass@postgres:5432/health_monitor
   #     VICTORIA_METRICS_URL: http://victoriametrics:8428
+  #     ALERT_WEBHOOK_REQUIRE_TOKEN: "true"
+  #     ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN}"
   #   depends_on:
   #     - postgres
   #     - victoriametrics

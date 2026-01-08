@@ -23,6 +23,7 @@ MANIFEST
 venv/
 env/
 ENV/
+agent/.venv/
 
 # Testing
 .pytest_cache/

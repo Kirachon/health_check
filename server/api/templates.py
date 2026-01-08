@@ -279,3 +279,288 @@ def delete_template_item(
 
     db.delete(item)
     db.commit()
+
+
+# Agent Configuration Endpoint - Enhanced with inheritance
+class AgentConfigItemResponse(BaseModel):
+    key: str
+    type: str
+    interval: int
+    parameters: dict = {}
+
+
+class AgentConfigResponse(BaseModel):
+    device_id: str
+    hostname: str
+    templates: List[str]
+    items: List[AgentConfigItemResponse]
+    updated_at: str
+
+
+@router.get("/agents/{device_id}/config", response_model=AgentConfigResponse)
+def get_agent_config(
+    device_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """Get agent configuration with full template inheritance support.
+    
+    Priority order:
+    1. Direct device-to-template assignments (highest)
+    2. Templates via host group membership
+    
+    Child templates override parent template items.
+    """
+    from db.models import Device
+    from services.template_resolver import template_resolver
+    
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found")
+    
+    # Use template resolver for proper inheritance and priority
+    config = template_resolver.get_effective_config(device, db)
+    
+    items = [
+        AgentConfigItemResponse(
+            key=item['key'],
+            type=item['value_type'],
+            interval=item['update_interval'],
+            parameters={}
+        )
+        for item in config['items']
+    ]
+    
+    return AgentConfigResponse(
+        device_id=str(device_id),
+        hostname=config['hostname'],
+        templates=config['templates'],
+        items=items,
+        updated_at=datetime.utcnow().isoformat()
+    )
+
+
+# Bulk Device Assignment Endpoints
+class BulkAssignmentRequest(BaseModel):
+    device_ids: List[UUID]
+    priority: Optional[int] = 0
+    replace_existing: Optional[bool] = False
+
+
+class BulkAssignmentResponse(BaseModel):
+    assigned: int
+    template_id: UUID
+    device_ids: List[UUID]
+
+
+@router.post("/{template_id}/assign", response_model=BulkAssignmentResponse)
+def bulk_assign_devices(
+    template_id: UUID,
+    data: BulkAssignmentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk assign devices directly to a template.
+    
+    Direct assignments override host group assignments.
+    """
+    from db.models import Device
+    from services.template_resolver import template_resolver
+    
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    assigned_count = 0
+    for device_id in data.device_ids:
+        device = db.query(Device).filter(Device.id == device_id).first()
+        if device:
+            template_resolver.assign_template_to_device(
+                db, str(device_id), str(template_id), data.priority
+            )
+            assigned_count += 1
+    
+    return BulkAssignmentResponse(
+        assigned=assigned_count,
+        template_id=template_id,
+        device_ids=data.device_ids
+    )
+
+
+@router.delete("/{template_id}/assign")
+def bulk_unassign_devices(
+    template_id: UUID,
+    data: BulkAssignmentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bulk remove direct device assignments from a template."""
+    from services.template_resolver import template_resolver
+    
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    for device_id in data.device_ids:
+        template_resolver.unassign_template_from_device(db, str(device_id), str(template_id))
+    
+    return {"message": f"Unassigned {len(data.device_ids)} devices from template"}
+
+
+class DeviceAssignmentResponse(BaseModel):
+    device_id: UUID
+    hostname: str
+    priority: int
+    assigned_at: datetime
+
+
+@router.get("/{template_id}/devices", response_model=List[DeviceAssignmentResponse])
+def list_assigned_devices(
+    template_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all devices directly assigned to a template."""
+    from db.models import Device, device_template
+    
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    # Query assignments with device info
+    assignments = db.execute(
+        device_template.select().where(device_template.c.template_id == template_id)
+    ).fetchall()
+    
+    result = []
+    for assignment in assignments:
+        device = db.query(Device).filter(Device.id == assignment.device_id).first()
+        if device:
+            result.append(DeviceAssignmentResponse(
+                device_id=device.id,
+                hostname=device.hostname,
+                priority=assignment.priority,
+                assigned_at=assignment.assigned_at
+            ))
+    
+    return result
+
+
+# Template Inheritance Endpoints
+class SetParentRequest(BaseModel):
+    parent_template_id: Optional[UUID] = None
+
+
+@router.put("/{template_id}/parent", response_model=TemplateResponse)
+def set_parent_template(
+    template_id: UUID,
+    data: SetParentRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set or remove the parent template for inheritance."""
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    if data.parent_template_id:
+        # Validate parent exists
+        parent = db.query(Template).filter(Template.id == data.parent_template_id).first()
+        if not parent:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent template not found")
+        
+        # Prevent circular reference
+        if data.parent_template_id == template_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Template cannot be its own parent")
+        
+        # Check for deeper circular references
+        from services.template_resolver import template_resolver
+        current = parent
+        while current.parent_template:
+            if current.parent_template.id == template_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Circular inheritance detected"
+                )
+            current = current.parent_template
+        
+        template.parent_template_id = data.parent_template_id
+    else:
+        template.parent_template_id = None
+    
+    db.commit()
+    db.refresh(template)
+    
+    return to_template_response(template)
+
+
+class InheritanceChainResponse(BaseModel):
+    templates: List[TemplateResponse]
+    effective_item_count: int
+
+
+@router.get("/{template_id}/inheritance", response_model=InheritanceChainResponse)
+def get_inheritance_chain(
+    template_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get the full inheritance chain for a template."""
+    from services.template_resolver import template_resolver
+    
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    try:
+        chain = template_resolver.resolve_template_chain(template, db)
+        merged_items = template_resolver.merge_template_items(chain)
+        
+        return InheritanceChainResponse(
+            templates=[to_template_response(t) for t in chain],
+            effective_item_count=len(merged_items)
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/{template_id}/propagate")
+def propagate_config(
+    template_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Force config propagation to all devices using this template.
+    
+    This triggers agents to refresh their configuration.
+    """
+    from db.models import Device, device_template
+    
+    template = db.query(Template).filter(Template.id == template_id).first()
+    if not template:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
+    
+    # Count affected devices (direct + via hostgroups)
+    affected_devices = set()
+    
+    # Direct assignments
+    direct = db.execute(
+        device_template.select().where(device_template.c.template_id == template_id)
+    ).fetchall()
+    affected_devices.update(str(a.device_id) for a in direct)
+    
+    # Via host groups
+    for hostgroup in template.host_groups:
+        for device in hostgroup.devices:
+            affected_devices.add(str(device.id))
+    
+    # Touch template updated_at to signal config change
+    template.updated_at = datetime.utcnow()
+    db.commit()
+    
+    return {
+        "message": f"Config propagation triggered for {len(affected_devices)} devices",
+        "affected_devices": len(affected_devices),
+        "template": template.name
+    }
+
+

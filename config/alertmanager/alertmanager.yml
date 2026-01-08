@@ -44,25 +44,19 @@ receivers:
     # email_configs:
     #   - to: 'admin@example.com'
     #     from: 'alertmanager@example.com'
-    #     smarthost: 'smtp.gmail.com:587'
-    #     auth_username: 'your-email@gmail.com'
-    #     auth_password: 'your-app-password'
-    
-    # Slack configuration (uncomment and configure)
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
-    #     channel: '#critical-alerts'
-    #     title: '🚨 Critical Alert'
-    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    #     smarthost: 'internal-smtp:587'
+    #     auth_username: 'internal-user'
+    #     auth_password: 'internal-password'
 
   # Warning alerts receiver
   - name: 'warning-alerts'
-    # Slack configuration (uncomment and configure)
-    # slack_configs:
-    #   - api_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK/URL'
-    #     channel: '#monitoring'
-    #     title: '⚠️ Warning Alert'
-    #     text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    # Email configuration (uncomment and configure)
+    # email_configs:
+    #   - to: 'admin@example.com'
+    #     from: 'alertmanager@example.com'
+    #     smarthost: 'internal-smtp:587'
+    #     auth_username: 'internal-user'
+    #     auth_password: 'internal-password'
 
 # Inhibition rules (suppress alerts)
 inhibit_rules:

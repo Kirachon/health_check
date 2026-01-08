@@ -30,7 +30,7 @@ The GUI will be available at http://localhost:5173 (or http://localhost:5174 if 
 
 ### Login (`/login`)
 - Admin authentication
-- Default credentials: admin / admin123
+- Use the admin account created via `scripts/create_admin.py`
 
 ### Dashboard (`/dashboard`)
 - Device list with status indicators

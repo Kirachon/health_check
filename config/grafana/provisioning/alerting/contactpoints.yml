@@ -12,30 +12,13 @@ contactPoints:
         disableResolveMessage: false
 
   - orgId: 1
-    name: slack-notifications
-    receivers:
-      - uid: slack
-        type: slack
-        settings:
-          url: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-          recipient: '#monitoring'
-          text: |
-            {{ range .Alerts }}
-            *Alert:* {{ .Labels.alertname }}
-            *Severity:* {{ .Labels.severity }}
-            *Device:* {{ .Labels.host_name }}
-            *Summary:* {{ .Annotations.summary }}
-            *Description:* {{ .Annotations.description }}
-            {{ end }}
-        disableResolveMessage: false
-
-  - orgId: 1
     name: webhook-api
     receivers:
       - uid: webhook
         type: webhook
         settings:
-          url: http://localhost:8000/api/v1/alerts/webhook
+          # Token is expanded from Grafana env var ALERT_WEBHOOK_TOKEN
+          url: http://localhost:8001/api/v1/alerts/webhook?token=${ALERT_WEBHOOK_TOKEN}
           httpMethod: POST
         disableResolveMessage: false
 
@@ -49,7 +32,7 @@ policies:
     group_interval: 5m
     repeat_interval: 4h
     routes:
-      # Critical alerts go to multiple channels
+      # Critical alerts go to email + webhook
       - receiver: email-notifications
         matchers:
           - severity = critical
@@ -57,15 +40,8 @@ policies:
         group_wait: 10s
         repeat_interval: 1h
 
-      - receiver: slack-notifications
-        matchers:
-          - severity = critical
-        continue: true
-        group_wait: 10s
-        repeat_interval: 1h
-
-      # Warning alerts only to Slack
-      - receiver: slack-notifications
+      # Warning alerts only to webhook
+      - receiver: webhook-api
         matchers:
           - severity = warning
         group_wait: 30s

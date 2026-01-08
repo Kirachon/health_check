@@ -50,6 +50,46 @@ docker exec health_monitor_db psql -U monitor_user -d health_monitor -c "SELECT 
 2. Login with `admin` / `admin`
 3. VictoriaMetrics datasource is pre-configured
 
+### 4. Run Backend API
+
+```bash
+cd server
+python main.py
+# Backend API: http://localhost:8001
+```
+Create an admin user via `scripts/create_admin.py` before logging in. If you are upgrading, ensure at least one admin exists (run the script if needed).
+
+### 5. Run Frontend (Optional)
+
+```bash
+cd gui
+npm install
+npm run dev
+# Frontend UI: http://localhost:5173
+```
+
+## 🎯 New Features (Jan 2026)
+
+### ✅ User Management
+- **CRUD API** with role-based access control (Admin, SRE, Viewer)
+- **Frontend UI** for managing users, roles, and passwords
+- **Security**: Self-deletion and last-admin protection
+
+### ✅ Alerting Engine
+- **Background worker** evaluating triggers every 60s
+- **VictoriaMetrics integration** for metric queries
+- **Threshold parsing**: `>`, `>=`, `<`, `<=`, `==`
+- **Alert events** with state transitions (OK ↔ PROBLEM)
+- **Acknowledge workflow** for alert management
+
+### ✅ Agent Template Support
+- **Dynamic configuration** - agents fetch metric collection config from server
+- **Template system** - define metrics in templates, link to host groups
+- **14 built-in collectors**: CPU, memory, disk, network, uptime, processes
+- **Auto-discovery** - agents automatically collect configured metrics
+
+**Testing:** See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for step-by-step manual testing
+
 ## Project Structure
 
 ```

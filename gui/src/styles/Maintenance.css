@@ -1,0 +1,388 @@
+/* Maintenance.css - Styles for Maintenance Windows page */
+
+.maintenance-page {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.maintenance-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+}
+
+/* Header */
+.maintenance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.header-icon {
+    color: var(--accent-primary);
+    filter: drop-shadow(var(--glow-cyan));
+}
+
+.maintenance-header h1 {
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    margin: 0;
+    color: var(--text-main);
+}
+
+.maintenance-header p {
+    margin: 0.25rem 0 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Sections */
+.section {
+    margin-bottom: 2rem;
+}
+
+.section h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.1rem;
+    color: var(--text-main);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+.active-section h2 {
+    color: var(--accent-success);
+}
+
+.inactive-section h2 {
+    color: var(--text-muted);
+}
+
+/* Window Grid */
+.window-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+/* Window Cards */
+.window-card {
+    background: var(--bg-glass);
+    backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.window-card:hover {
+    border-color: var(--accent-secondary);
+    box-shadow: 0 4px 20px rgba(0, 200, 255, 0.1);
+}
+
+.window-card.active-card {
+    border-color: var(--accent-success);
+    background: linear-gradient(135deg,
+            rgba(16, 185, 129, 0.1) 0%,
+            var(--bg-glass) 100%);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.status-icon.active {
+    color: var(--accent-success);
+}
+
+.card-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.card-actions button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.card-actions button:hover {
+    color: var(--accent-secondary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.card-actions .delete-btn:hover {
+    color: var(--accent-error);
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.description {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.scope-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    background: rgba(0, 200, 255, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.time-range {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.recurrence-badge {
+    font-size: 0.75rem;
+    color: var(--accent-warning);
+    background: rgba(245, 158, 11, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.no-data-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--accent-error);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+/* Empty State */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    background: var(--bg-glass);
+    border-radius: 12px;
+    border: var(--glass-border);
+}
+
+.empty-state p {
+    margin-top: 1rem;
+}
+
+/* Window List (inactive) */
+.window-list {
+    background: var(--bg-glass);
+    border-radius: 8px;
+    border: var(--glass-border);
+    overflow: hidden;
+}
+
+.window-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+}
+
+.window-row:last-child {
+    border-bottom: none;
+}
+
+.window-row .name {
+    color: var(--text-muted);
+}
+
+.window-row .scope {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+.window-row .time {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+}
+
+.window-row .delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+}
+
+.window-row .delete-btn:hover {
+    color: var(--accent-error);
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 2rem;
+}
+
+.modal-content {
+    background: var(--bg-surface);
+    border: var(--glass-border);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content h2 {
+    margin: 0 0 1.5rem;
+    color: var(--text-main);
+    font-size: 1.25rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-glass);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: auto;
+}
+
+.checkbox-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Buttons */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 4px 20px rgba(0, 200, 255, 0.3);
+}
+
+.btn-secondary {
+    padding: 0.6rem 1.25rem;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}

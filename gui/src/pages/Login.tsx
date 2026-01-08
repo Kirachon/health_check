@@ -86,7 +86,7 @@ const Login: React.FC = () => {
                 </form>
 
                 <div className="login-footer">
-                    <p>Default credentials: admin / admin123</p>
+                    <p>Use the admin account created via <code>scripts/create_admin.py</code>.</p>
                 </div>
             </div>
         </div>

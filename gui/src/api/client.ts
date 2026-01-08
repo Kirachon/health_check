@@ -202,6 +202,22 @@ class APIClient {
         return response.data;
     }
 
+    // Alerts endpoints
+    async listAlerts(params?: { status?: string; acknowledged?: boolean; limit?: number; offset?: number; trigger_id?: string }) {
+        const response = await this.client.get('/alerts', { params });
+        return response.data;
+    }
+
+    async acknowledgeAlert(id: string, data?: { message?: string }) {
+        const response = await this.client.post(`/alerts/${id}/acknowledge`, data || {});
+        return response.data;
+    }
+
+    async getAlertCounts() {
+        const response = await this.client.get('/alerts/summary/counts');
+        return response.data;
+    }
+
     // Actions endpoints
     async listActions(params?: { skip?: number; limit?: number; search?: string; action_type?: string; enabled?: boolean }) {
         const response = await this.client.get('/actions', { params });
@@ -234,6 +250,131 @@ class APIClient {
 
     async deleteActionOperation(actionId: string, operationId: string) {
         await this.client.delete(`/actions/${actionId}/operations/${operationId}`);
+    }
+
+    // Users endpoints (admin only)
+    async listUsers(params?: { search?: string; role?: string; limit?: number; offset?: number }) {
+        const response = await this.client.get('/users', { params });
+        return response.data;
+    }
+
+    async getUser(id: string) {
+        const response = await this.client.get(`/users/${id}`);
+        return response.data;
+    }
+
+    async createUser(data: { username: string; password: string; role?: string }) {
+        const response = await this.client.post('/users', data);
+        return response.data;
+    }
+
+    async updateUser(id: string, data: { role?: string }) {
+        const response = await this.client.put(`/users/${id}`, data);
+        return response.data;
+    }
+
+    async deleteUser(id: string) {
+        await this.client.delete(`/users/${id}`);
+    }
+
+    async resetUserPassword(id: string, password: string) {
+        await this.client.post(`/users/${id}/reset-password`, { password });
+    }
+
+    // Maps endpoints
+    async listMaps() {
+        const response = await this.client.get('/maps');
+        return response.data;
+    }
+
+    async getMap(id: string) {
+        const response = await this.client.get(`/maps/${id}`);
+        return response.data;
+    }
+
+    async createMap(data: { name: string; description?: string; width?: number; height?: number; background_image?: string }) {
+        const response = await this.client.post('/maps', data);
+        return response.data;
+    }
+
+    async updateMap(id: string, data: { name?: string; description?: string; width?: number; height?: number; background_image?: string }) {
+        const response = await this.client.put(`/maps/${id}`, data);
+        return response.data;
+    }
+
+    async deleteMap(id: string) {
+        await this.client.delete(`/maps/${id}`);
+    }
+
+    async addMapElement(mapId: string, data: { element_type: string; device_id?: string; hostgroup_id?: string; label?: string; x: number; y: number; icon?: string }) {
+        const response = await this.client.post(`/maps/${mapId}/elements`, data);
+        return response.data;
+    }
+
+    async updateMapElement(mapId: string, elementId: string, data: { x?: number; y?: number; label?: string }) {
+        const response = await this.client.put(`/maps/${mapId}/elements/${elementId}`, data);
+        return response.data;
+    }
+
+    async deleteMapElement(mapId: string, elementId: string) {
+        await this.client.delete(`/maps/${mapId}/elements/${elementId}`);
+    }
+
+    async addMapLink(mapId: string, data: { source_element_id: string; target_element_id: string; link_type?: string }) {
+        const response = await this.client.post(`/maps/${mapId}/links`, data);
+        return response.data;
+    }
+
+    async deleteMapLink(mapId: string, linkId: string) {
+        await this.client.delete(`/maps/${mapId}/links/${linkId}`);
+    }
+
+    // Discovery endpoints
+    async listDiscoveryJobs(params?: { skip?: number; limit?: number; status_filter?: string }) {
+        const response = await this.client.get('/discovery', { params });
+        return response.data;
+    }
+
+    async getDiscoveryJob(jobId: string) {
+        const response = await this.client.get(`/discovery/${jobId}`);
+        return response.data;
+    }
+
+    async createDiscoveryJob(data: {
+        name: string;
+        description?: string;
+        ip_ranges: string;
+        scan_icmp?: boolean;
+        scan_snmp?: boolean;
+        snmp_community?: string;
+        snmp_version?: string;
+        scan_ports?: string | null;
+        schedule_type?: string;
+        schedule_cron?: string | null;
+        auto_add_devices?: boolean;
+        auto_add_hostgroup_id?: string | null;
+    }) {
+        const response = await this.client.post('/discovery', data);
+        return response.data;
+    }
+
+    async runDiscoveryJob(jobId: string) {
+        const response = await this.client.post(`/discovery/${jobId}/run`);
+        return response.data;
+    }
+
+    async deleteDiscoveryJob(jobId: string) {
+        await this.client.delete(`/discovery/${jobId}`);
+    }
+
+    async getDiscoveryResults(jobId: string, params?: { status_filter?: string }) {
+        const response = await this.client.get(`/discovery/${jobId}/results`, { params });
+        return response.data;
+    }
+
+    async addDiscoveredDevices(jobId: string, data: { result_ids: string[]; hostgroup_id?: string | null }) {
+        const response = await this.client.post(`/discovery/${jobId}/add-devices`, data);
+        return response.data;
     }
 }
 

@@ -56,10 +56,6 @@ pytest --cov=. --cov-report=html
 - `DELETE /api/v1/devices/{id}` - Delete device (auth required)
 - `POST /api/v1/devices/{id}/heartbeat` - Update device status
 
-## Default Credentials
+## Admin Bootstrap
 
-**Admin User:**
-- Username: `admin`
-- Password: `admin123`
-
-⚠️ **Change these in production!**
+Create the first admin user via `scripts/create_admin.py` (do not ship default credentials).

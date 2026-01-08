@@ -1,5 +1,6 @@
 # Alert Testing Script
 
+import os
 import requests
 import time
 import psutil
@@ -56,12 +57,15 @@ def test_webhook():
         ]
     }
     
+    webhook_url = os.getenv("ALERT_WEBHOOK_URL", "http://localhost:8001/api/v1/alerts/webhook")
+    webhook_token = os.getenv("ALERT_WEBHOOK_TOKEN")
+    if not webhook_token:
+        print("❌ ALERT_WEBHOOK_TOKEN is not set. Export it before running this test.")
+        return
+    webhook_url = f"{webhook_url}?token={webhook_token}"
+
     try:
-        response = requests.post(
-            "http://localhost:8000/api/v1/alerts/webhook",
-            json=payload,
-            timeout=5
-        )
+        response = requests.post(webhook_url, json=payload, timeout=5)
         print(f"✅ Webhook response: {response.status_code}")
         print(f"Response: {response.json()}")
     except Exception as e:

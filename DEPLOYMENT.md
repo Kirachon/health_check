@@ -223,7 +223,22 @@ ALTER USER monitor_user WITH PASSWORD 'new-secure-password';
 # Update server/.env with new password
 ```
 
-### 2. Configure Firewall
+### 2. Set Admin Credentials
+
+Create the initial admin user via `scripts/create_admin.py` and store credentials securely.
+If upgrading, run the script if no admin accounts exist.
+
+### 3. Lock Down Grafana
+
+- Set `GF_SECURITY_ADMIN_USER` and `GF_SECURITY_ADMIN_PASSWORD` to strong values.
+- Ensure Grafana is not exposed outside internal networks.
+
+### 4. Configure Alert Webhook Token
+
+- Set `ALERT_WEBHOOK_TOKEN` in `server/.env` and in the Grafana service environment.
+- Rotate the token before distributing to other departments.
+
+### 5. Configure Firewall
 
 ```bash
 # UFW (Ubuntu)
@@ -239,7 +254,7 @@ sudo ufw deny 9094
 sudo ufw deny 8001
 ```
 
-### 3. Secure JWT Secret
+### 6. Secure JWT Secret
 
 Generate a strong secret key (already done in automated install):
 
@@ -297,7 +312,7 @@ curl http://localhost:9090/health
 - **API Documentation:** https://yourdomain.com/api/v1/docs
 - **Grafana:** https://yourdomain.com/grafana
 
-**Default Login:** admin / admin123 (change immediately!)
+Create the initial admin via `scripts/create_admin.py` after deployment.
 
 ---
 

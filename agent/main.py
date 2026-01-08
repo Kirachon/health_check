@@ -5,7 +5,7 @@ import logging
 import signal
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional, Union
 from urllib.parse import urlparse, urlunparse
 import requests
 
@@ -24,20 +24,26 @@ def signal_handler(signum, frame):
     shutdown_requested = True
 
 
-def load_config(config_path: str = "config.yaml") -> Dict:
+def _default_config_path() -> Path:
+    """Return the default config path next to this script."""
+    return Path(__file__).resolve().parent / "config.yaml"
+
+
+def load_config(config_path: Optional[Union[str, Path]] = None) -> Dict:
     """Load configuration from YAML file"""
     try:
-        with open(config_path, "r") as f:
+        path = Path(config_path) if config_path else _default_config_path()
+        with open(path, "r") as f:
             return yaml.safe_load(f)
     except FileNotFoundError:
-        logging.error(f"Config file not found: {config_path}")
+        logging.error(f"Config file not found: {path}")
         sys.exit(1)
     except yaml.YAMLError as e:
         logging.error(f"Invalid YAML in config file: {e}")
         sys.exit(1)
 
 
-def register_device(config: Dict, device_info: Dict) -> Dict:
+def register_device(config: Dict, device_info: Dict, config_path: Path) -> Dict:
     """Register device with the server if not already registered"""
     # Check if already registered
     if config.get("device_id") and config.get("device_token"):
@@ -64,7 +70,7 @@ def register_device(config: Dict, device_info: Dict) -> Dict:
         config["device_id"] = device_id
         config["device_token"] = device_token
         
-        with open("config.yaml", "w") as f:
+        with open(config_path, "w") as f:
             yaml.dump(config, f, default_flow_style=False)
         
         return config
@@ -131,7 +137,8 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
     
     # Load configuration
-    config = load_config()
+    config_path = _default_config_path()
+    config = load_config(config_path)
     
     # Setup logging
     logging.basicConfig(
@@ -155,7 +162,7 @@ def main():
     logger.info(f"Device: {device_info['hostname']} ({device_info['ip']})")
     
     # Register device (if needed)
-    config = register_device(config, device_info)
+    config = register_device(config, device_info, config_path)
     
     # Initialize sender
     sender = MetricsSender(config, device_info)

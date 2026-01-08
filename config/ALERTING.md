@@ -1,6 +1,7 @@
 # Alerting Configuration Guide
 
 This document explains how to configure alerting for the Health Monitor system.
+This deployment is intended for internal server/department networks only and should not use external/cloud endpoints.
 
 ## Alert Rules
 
@@ -27,7 +28,7 @@ Edit `config/grafana/provisioning/alerting/contactpoints.yml`:
   receivers:
     - type: email
       settings:
-        addresses: your-email@example.com  # Change this
+        addresses: internal-alerts@example.local  # Change this
         singleEmail: false
 ```
 
@@ -38,59 +39,58 @@ Edit `config/grafana/provisioning/alerting/contactpoints.yml`:
   ```yaml
   environment:
     GF_SMTP_ENABLED: "true"
-    GF_SMTP_HOST: "smtp.gmail.com:587"
-    GF_SMTP_USER: "your-email@gmail.com"
-    GF_SMTP_PASSWORD: "your-app-password"
-    GF_SMTP_FROM_ADDRESS: "grafana@example.com"
-  ```
+    GF_SMTP_HOST: "internal-smtp:587"
+    GF_SMTP_USER: "internal-user"
+    GF_SMTP_PASSWORD: "internal-password"
+    GF_SMTP_FROM_ADDRESS: "alerts@example.local"
+```
+### 2. Webhook (API Integration)
 
-### 2. Slack Notifications
+Alerts are sent to the FastAPI backend at `http://localhost:8001/api/v1/alerts/webhook`.
 
-1. Create Slack Incoming Webhook:
-   - Go to https://api.slack.com/apps
-   - Create new app → Incoming Webhooks
-   - Add webhook to workspace
-   - Copy webhook URL
+This endpoint is implemented and expects a webhook token by default. You can pass the token either:
+- As a query param: `?token=YOUR_TOKEN`
+- Or via header: `X-Webhook-Token: YOUR_TOKEN`
 
-2. Update `contactpoints.yml`:
-   ```yaml
-   - name: slack-notifications
-     receivers:
-       - type: slack
-         settings:
-           url: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
-           recipient: '#monitoring'  # Your channel
-   ```
+Update `contactpoints.yml` to include the token:
 
-### 3. Webhook (API Integration)
+```yaml
+- name: webhook-api
+  receivers:
+    - type: webhook
+      settings:
+        url: http://localhost:8001/api/v1/alerts/webhook?token=${ALERT_WEBHOOK_TOKEN}
+        httpMethod: POST
+```
 
-Alerts are sent to FastAPI backend at `/api/v1/alerts/webhook`.
+Set the token for Grafana (docker-compose example):
 
-To implement the webhook endpoint, add to `server/api/alerts.py`:
-
-```python
-from fastapi import APIRouter
-
-router = APIRouter(prefix="/alerts", tags=["Alerts"])
-
-@router.post("/webhook")
-async def alert_webhook(payload: dict):
-    # Process alert, store in database, send notifications
-    print(f"Received alert: {payload}")
-    return {"status": "received"}
+```yaml
+environment:
+  ALERT_WEBHOOK_TOKEN: "set-strong-token"
 ```
 
 ## Alert Routing
 
 ### Critical Alerts
-- Sent to: Email + Slack + Webhook
+- Sent to: Email + Webhook
 - Repeat interval: 1 hour
 - Applies to: CPU > 90%, Memory > 85%, Disk > 90%
 
 ### Warning Alerts
-- Sent to: Slack + Webhook
+- Sent to: Webhook
 - Repeat interval: 4 hours
 - Applies to: CPU > 80%, Device Offline
+
+## Alert Retention
+
+Alert events are retained for 30 days by default.
+
+Manual cleanup:
+
+```bash
+python scripts/cleanup_alerts.py --days 30
+```
 
 ## Testing Alerts
 
