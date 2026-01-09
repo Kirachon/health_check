@@ -15,6 +15,9 @@ For production-style deployment:
 - Linux: see `DEPLOYMENT.md`
 - Windows: see `docs/deployment/windows.md`
 
+Beginner on Windows (copy/paste guide):
+- `docs/quickstart/windows-hybrid.md`
+
 ### Prerequisites
 - Docker + Docker Compose (or Docker Desktop on Windows)
 - Python 3.11+ (server + agent)
