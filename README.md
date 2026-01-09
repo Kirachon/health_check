@@ -14,6 +14,7 @@ This README is for a quick local/hybrid setup (Docker infrastructure + host API 
 For production-style deployment:
 - Linux: see `DEPLOYMENT.md`
 - Windows: see `docs/deployment/windows.md`
+ - No Docker: see `docs/deployment/no-docker.md`
 
 Beginner on Windows (copy/paste guide):
 - `docs/quickstart/windows-hybrid.md`
