@@ -15,6 +15,16 @@
 - Python 3.11+ (server + agent)
 - Node.js 20.19+ or 22.12+ (GUI) *(Vite 7 requires this; older Node may warn or fail to build)*
 
+### 0. Get the Code (Clone)
+
+Windows PowerShell:
+```powershell
+git clone https://github.com/Kirachon/health_check.git
+cd health_check
+```
+
+Or download the repo as a zip from GitHub and extract it, then open a terminal in the extracted folder.
+
 ### 1. Start Infrastructure (Docker)
 
 Create a root `.env` file (do not commit it) or export these environment variables:
