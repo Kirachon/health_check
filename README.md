@@ -10,6 +10,11 @@
 
 ## Quick Start
 
+This README is for a quick local/hybrid setup (Docker infrastructure + host API + optional GUI dev server).
+For production-style deployment:
+- Linux: see `DEPLOYMENT.md`
+- Windows: see `docs/deployment/windows.md`
+
 ### Prerequisites
 - Docker + Docker Compose (or Docker Desktop on Windows)
 - Python 3.11+ (server + agent)
@@ -94,11 +99,48 @@ docker exec health_monitor_db psql -U monitor_user -d health_monitor -c "SELECT 
 
 ### 4. Run Backend API
 
+The API runs on `http://localhost:8001` by default.
+
+Windows (PowerShell):
+```powershell
+Set-Location .\server
+python -m venv venv
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
+
+Copy-Item .env.example .env
+
+# IMPORTANT: set DATABASE_URL to the Postgres password you used for Docker
+$POSTGRES_PASSWORD = (Get-Content ..\.env | Select-String '^POSTGRES_PASSWORD=').Line.Split('=')[1]
+$ALERT_WEBHOOK_TOKEN = (Get-Content ..\.env | Select-String '^ALERT_WEBHOOK_TOKEN=').Line.Split('=')[1]
+
+(Get-Content .env) `
+  -replace '^SECRET_KEY=.*', ('SECRET_KEY=' + (python -c "import secrets; print(secrets.token_hex(32))")) `
+  -replace '^DATABASE_URL=.*', ('DATABASE_URL=postgresql://monitor_user:' + $POSTGRES_PASSWORD + '@localhost:5433/health_monitor') `
+  -replace '^ALERT_WEBHOOK_TOKEN=.*', ('ALERT_WEBHOOK_TOKEN=' + $ALERT_WEBHOOK_TOKEN) `
+  | Set-Content .env
+
+.\venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8001
+```
+
+Linux/macOS:
 ```bash
 cd server
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 cp .env.example .env
-python main.py
-# Backend API: http://localhost:8001
+
+# IMPORTANT: set DATABASE_URL to the Postgres password you used for Docker
+POSTGRES_PASSWORD="$(grep '^POSTGRES_PASSWORD=' ../.env | cut -d= -f2-)"
+ALERT_WEBHOOK_TOKEN="$(grep '^ALERT_WEBHOOK_TOKEN=' ../.env | cut -d= -f2-)"
+SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')"
+
+perl -pi -e "s|^SECRET_KEY=.*|SECRET_KEY=${SECRET_KEY}|" .env
+perl -pi -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://monitor_user:${POSTGRES_PASSWORD}@localhost:5433/health_monitor|" .env
+perl -pi -e "s|^ALERT_WEBHOOK_TOKEN=.*|ALERT_WEBHOOK_TOKEN=${ALERT_WEBHOOK_TOKEN}|" .env
+
+uvicorn main:app --host 127.0.0.1 --port 8001
+deactivate
 ```
 
 For internal deployments, we recommend **admin-only enrollment**:
