@@ -199,6 +199,104 @@ Then run the agent:
 
 Within ~30–60 seconds the device should show as **Online** in the GUI dashboard.
 
+## 10) Add another computer (remote device) ✅
+
+To monitor a different computer on your network (not the server running the API):
+
+### What must be reachable over the network
+
+From the remote computer, the agent must be able to reach:
+
+- **API** (`api_url`) — default: `http://<SERVER_IP>:8001`
+- **VictoriaMetrics** (`server_url`) — default: `http://<SERVER_IP>:9090`
+
+Important: in this repo the Docker ports are bound to `127.0.0.1` by default for safety, which means **other computers cannot reach them** until you intentionally expose them to your LAN.
+
+### Step A) Expose the required ports to your internal network (server machine)
+
+Do this only on a trusted internal/department network, and restrict access with Windows Firewall.
+
+1) Edit `docker-compose.yml` on the server machine:
+
+- Change VictoriaMetrics from:
+  - `127.0.0.1:9090:8428`
+  to:
+  - `0.0.0.0:9090:8428`
+
+2) Ensure the API is listening on the LAN:
+
+- If you start it like this, it is **localhost-only** (recommended when you only monitor the same machine):
+  - `--host 127.0.0.1`
+- For remote agents, start it like this:
+  - `--host 0.0.0.0`
+
+3) Restart services:
+
+```powershell
+Set-Location C:\path\to\health_check   # adjust
+docker compose up -d
+```
+
+Restart the API server with `--host 0.0.0.0` if needed.
+
+4) Windows Firewall: allow only your internal subnet to these ports:
+
+- TCP `8001` (API)
+- TCP `9090` (VictoriaMetrics)
+
+### Step B) Register the remote device (server machine, as admin)
+
+Run on the server machine:
+
+```powershell
+$ErrorActionPreference = "Stop"
+$base = "http://localhost:8001/api/v1"
+
+$login = Invoke-RestMethod -Method Post -Uri "$base/auth/login" -ContentType "application/json" -Body (@{
+  username = "admin"
+  password = "change-me"
+} | ConvertTo-Json)
+
+$access = $login.access_token
+
+# Replace these with the remote machine details
+$remoteHostname = "REMOTE-PC-NAME"
+$remoteIp = "192.168.1.50"
+
+$device = Invoke-RestMethod -Method Post -Uri "$base/devices/register" -Headers @{ Authorization = "Bearer $access" } -ContentType "application/json" -Body (@{
+  hostname = $remoteHostname
+  ip       = $remoteIp
+  os       = "windows"
+} | ConvertTo-Json)
+
+$device
+```
+
+Copy the returned `device_id` and `token` securely to the remote machine administrator.
+
+### Step C) Install and run the agent on the remote machine
+
+On the remote machine:
+
+1) Copy the `agent/` folder (for example: zip it, SMB share, or internal Git clone).
+2) Create `agent/config.local.yaml` and set:
+   - `api_url: http://<SERVER_IP>:8001`
+   - `server_url: http://<SERVER_IP>:9090`
+   - `device_id: "<device_id from Step B>"`
+   - `device_token: "<token from Step B>"`
+3) Run:
+
+```powershell
+Set-Location C:\path\to\agent   # adjust
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .\config.yaml .\config.local.yaml
+notepad .\config.local.yaml
+.\.venv\Scripts\python.exe .\main.py
+```
+
+Back on the server machine, the GUI dashboard should show the remote device and it should become **Online** once heartbeats arrive.
+
 ### Option B (Labs only): Token-based self-enrollment
 
 Use this only in trusted/internal lab environments. In this mode the agent can register itself using a shared registration token.
